@@ -14,7 +14,8 @@
     <div class="topbar-title" id="editTitle">编辑</div>
     <div class="row top-actions">
       <button class="btn" type="button" id="saveBtn">保存</button>
-      <button class="btn ghost" type="button" id="exportBtn">导出 JSON</button>
+      <button class="btn ghost" type="button" id="exportBtn">导出项目 JSON</button>
+      <button class="btn ghost" type="button" id="exportMofangBtn">导出魔方 JSON</button>
       <button class="btn ghost" type="button" id="fullBtn">全屏预览</button>
       <button class="btn danger" type="button" id="delBtn">删除</button>
     </div>
@@ -23,11 +24,19 @@
   <div class="edit-layout">
     <form class="main form-col" id="form" autocomplete="off">
       <section class="block">
+        <h2>数据</h2>
+        <div class="row">
+          <button class="btn" type="button" id="importMofangBtn">导入魔方 JSON</button>
+          <input id="importMofangFile" type="file" accept="application/json" hidden />
+        </div>
+        <p class="muted" id="importHint"></p>
+      </section>
+      <section class="block">
         <h2>基本</h2>
         <div class="grid">
           <div class="field"><label>姓名</label><input name="name" /></div>
           <div class="field"><label>英文名</label><input name="nameEn" /></div>
-          <div class="field"><label>岗位/版本</label><input name="variant" /></div>
+          <div class="field"><label>岗位标题</label><input name="headline" /></div>
           <div class="field">
             <label>主题</label>
             <select name="theme">
@@ -46,6 +55,24 @@
               <option value="compact">Compact</option>
             </select>
           </div>
+          <div class="field" id="variantWrap">
+            <label>布局变体</label>
+            <select name="layoutVariant">
+              <option value="left">左侧</option>
+              <option value="left-wide">左侧宽</option>
+              <option value="left-narrow">左侧窄</option>
+              <option value="right">右侧</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>页面方向</label>
+            <select name="orientation">
+              <option value="portrait">竖版</option>
+              <option value="landscape">横版</option>
+            </select>
+          </div>
+          <div class="field"><label>强调色</label><input name="accentColor" placeholder="默认" /></div>
+          <div class="field"><label>字号</label><input name="fontSize" placeholder="默认" /></div>
           <div class="field span2"><label>一句话</label><input name="tagline" /></div>
         </div>
       </section>

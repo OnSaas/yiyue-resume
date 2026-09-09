@@ -47,3 +47,15 @@ test("theme override accent", () => {
   const html = renderResume(resume, { layout: "classic", theme: "paper", themeOverrides: { accentColor: "#2563eb" } });
   assert.match(html, /#2563eb/);
 });
+
+test("orientation landscape", () => {
+  const html = renderResume(resume, { layout: "sidebar", theme: "paper", orientation: "landscape" });
+  assert.match(html, /data-orientation="landscape"/);
+  assert.match(html, /A4 landscape/);
+});
+
+test("orientation portrait default", () => {
+  const html = renderResume(resume, { layout: "classic", theme: "ink" });
+  assert.match(html, /data-orientation="portrait"/);
+});
+

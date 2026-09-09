@@ -1,20 +1,22 @@
-import { normalizePresentation, emptyPresentation } from "../schema/presentation.js";
+import { emptyPresentation } from "../schema/presentation.js";
 
 function publicShare(s) {
-  const presentation = normalizePresentation(s.presentation || { theme: s.theme });
+  const p = s.presentation || {};
   return {
     token: s.token,
     resumeId: s.resumeId,
-    theme: presentation.theme,
-    layout: presentation.layout,
-    layoutVariant: presentation.layoutVariant,
-    presentation,
+    theme: p.theme || s.theme || "inherit",
+    layout: p.layout || "inherit",
+    layoutVariant: p.layoutVariant || "inherit",
+    orientation: p.orientation || "inherit",
+    presentation: p,
     hasPassword: !!s.passwordHash,
     expiresAt: s.expiresAt,
     createdAt: s.createdAt,
     revoked: !!s.revoked,
     label: s.label || "",
     url: "/s/" + s.token,
+    resumeMissing: !!s.resumeMissing,
   };
 }
 
@@ -38,18 +40,18 @@ export function shareRepository(kv) {
       const raw = await kv.get("share:" + token);
       if (!raw) return null;
       const s = JSON.parse(raw);
-      if (!s.presentation) s.presentation = { ...emptyPresentation(), theme: s.theme || "paper" };
-      else s.presentation = normalizePresentation(s.presentation);
+      if (!s.presentation) s.presentation = { layout: "inherit", theme: s.theme || "inherit", orientation: "inherit", layoutVariant: "inherit" };
       return s;
     },
     async save(token, share) {
       await kv.put("share:" + token, JSON.stringify(share));
       return share;
     },
-    async list() {
+    async list(resumeIds) {
       const tokens = await listTokens();
       const rows = await Promise.all(tokens.map((t) => this.get(t)));
-      return rows.filter(Boolean).map(publicShare);
+      const set = resumeIds ? new Set(resumeIds) : null;
+      return rows.filter(Boolean).map((s) => publicShare({ ...s, resumeMissing: set ? !set.has(s.resumeId) : false }));
     },
     publicShare,
   };

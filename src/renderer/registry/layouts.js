@@ -10,7 +10,7 @@ export const LAYOUT_DEFS = {
     compact: false,
     header: "full",
     columns: [
-      { width: 70, children: ["experience", "projects", "education", "custom"] },
+      { width: 70, children: ["experience", "projects", "education", "awards", "publications", "custom"] },
       { width: 30, children: ["contact", "skills", "languages", "certifications"] },
     ],
   },
@@ -36,7 +36,7 @@ export const LAYOUT_DEFS = {
     variants: {
       left: [
         { width: 32, children: ["profile", "contact", "skills", "languages"] },
-        { width: 68, children: ["experience", "projects", "education", "custom"] },
+        { width: 68, children: ["experience", "projects", "education", "awards", "publications", "custom"] },
       ],
       "left-wide": [
         { width: 40, children: ["profile", "contact", "skills"] },
@@ -47,7 +47,7 @@ export const LAYOUT_DEFS = {
         { width: 74, children: ["experience", "projects", "education", "custom"] },
       ],
       right: [
-        { width: 68, children: ["experience", "projects", "education", "custom"] },
+        { width: 68, children: ["experience", "projects", "education", "awards", "publications", "custom"] },
         { width: 32, children: ["profile", "contact", "skills"] },
       ],
     },

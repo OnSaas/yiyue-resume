@@ -62,3 +62,14 @@ test("bad json", () => {
   assert.equal(got.ok, false);
   assert.ok(got.errors[0].includes("JSON"));
 });
+
+test("mofang round trip keeps core", async () => {
+  const { toMofang } = await import("../src/adapters/mofang.js");
+  const c = fromMofang(mofang);
+  const back = toMofang(c);
+  assert.equal(back.basic.name, "宋哈娜");
+  assert.equal(back.experience[0].company, "Acme");
+  assert.equal(back.projects[0].link, "https://x.dev");
+  assert.ok(back.skillContent.includes("React") || (c.skills || []).includes("React"));
+});
+

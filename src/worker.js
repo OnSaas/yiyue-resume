@@ -3,7 +3,8 @@ import { renderResume } from "./renderer/engine.js";
 import { resumeRepository } from "./repositories/resumes.js";
 import { shareRepository } from "./repositories/shares.js";
 import { emptyCanonical } from "./schema/resume.js";
-import { emptyPresentation, normalizePresentation, THEMES, LAYOUTS } from "./schema/presentation.js";
+import { emptyPresentation, normalizePresentation, resolvePresentation, THEMES, LAYOUTS } from "./schema/presentation.js";
+import { toMofang } from "./adapters/mofang.js";
 import { hashPassword, verifyPassword } from "./share/security.js";
 
 const enc = new TextEncoder();
@@ -115,23 +116,31 @@ async function readBody(req) {
   try { return JSON.parse(t); } catch { return {}; }
 }
 function presentationFromQuery(url, fallback) {
-  const p = { ...(fallback || emptyPresentation()) };
-  const layout = url.searchParams.get("layout");
-  const theme = url.searchParams.get("theme");
-  const layoutVariant = url.searchParams.get("layoutVariant");
-  if (layout) p.layout = layout;
-  if (theme) p.theme = theme;
-  if (layoutVariant != null) p.layoutVariant = layoutVariant;
-  return normalizePresentation(p);
+  return resolvePresentation(fallback, {
+    layout: url.searchParams.get("layout"),
+    theme: url.searchParams.get("theme"),
+    layoutVariant: url.searchParams.get("layoutVariant"),
+    orientation: url.searchParams.get("orientation"),
+  });
+}
+function presentationOverrideFromBody(body) {
+  const raw = body.presentation ? { ...body, ...body.presentation } : body;
+  const o = {};
+  for (const k of ["layout", "layoutVariant", "theme", "orientation"]) {
+    if (raw[k] === "inherit" || raw[k] === "" || raw[k] == null) o[k] = "inherit";
+    else o[k] = raw[k];
+  }
+  if (raw.themeOverrides) o.themeOverrides = raw.themeOverrides;
+  return o;
 }
 function presentationFromBody(body, fallback) {
-  if (body.presentation) return normalizePresentation({ ...(fallback || {}), ...body.presentation });
-  return normalizePresentation({
-    ...(fallback || emptyPresentation()),
-    layout: body.layout,
-    layoutVariant: body.layoutVariant,
-    theme: body.theme,
-    themeOverrides: body.themeOverrides,
+  const raw = body.presentation ? { ...body, ...body.presentation } : body;
+  return resolvePresentation(fallback, {
+    layout: raw.layout,
+    layoutVariant: raw.layoutVariant,
+    theme: raw.theme,
+    orientation: raw.orientation,
+    themeOverrides: raw.themeOverrides,
   });
 }
 
@@ -170,7 +179,7 @@ export default {
         if (share.passwordHash && !(await shareUnlocked(req, env, token))) return html(unlockPage(token), 200);
         const doc = await resumes.get(share.resumeId);
         if (!doc) return html(failPage("简历不存在", "分享指向的简历已删除。"), 404);
-        const presentation = normalizePresentation(share.presentation || { theme: share.theme });
+        const presentation = resolvePresentation(doc.presentation, share.presentation);
         return html(renderResume(doc.resume, presentation));
       }
     }
@@ -238,6 +247,12 @@ export default {
         const doc = await resumes.save(id, { resume: got.resume, presentation });
         return json(doc, 201);
       }
+      const mofangPath = path.match(/^\/api\/resumes\/([^/]+)\/mofang$/);
+      if (mofangPath && method === "GET") {
+        const doc = await resumes.get(decodeURIComponent(mofangPath[1]));
+        if (!doc) return json({ error: "不存在" }, 404);
+        return json(toMofang(doc.resume));
+      }
       const one = path.match(/^\/api\/resumes\/([^/]+)$/);
       if (one) {
         const id = decodeURIComponent(one[1]);
@@ -251,6 +266,9 @@ export default {
           const got = ingest(body.resume || body);
           if (!got.ok) return json({ error: got.errors.join("；"), errors: got.errors }, 400);
           const prev = await resumes.get(id);
+          if (prev?.resume?.extras && !(got.resume.extras && got.resume.extras.mofang)) {
+            got.resume.extras = prev.resume.extras;
+          }
           const presentation = presentationFromBody(body, prev?.presentation);
           const doc = await resumes.save(id, { resume: got.resume, presentation });
           return json(doc);
@@ -261,7 +279,10 @@ export default {
         }
       }
 
-      if (path === "/api/shares" && method === "GET") return json({ shares: await shares.list() });
+      if (path === "/api/shares" && method === "GET") {
+        const list = await resumes.list();
+        return json({ shares: await shares.list(list.map((r) => r.id)) });
+      }
       if (path === "/api/shares" && method === "POST") {
         let body;
         try { body = await req.json(); } catch { return json({ error: "坏 JSON" }, 400); }
@@ -278,7 +299,7 @@ export default {
         const share = {
           token,
           resumeId,
-          presentation: presentationFromBody(body, exists.presentation),
+          presentation: presentationOverrideFromBody(body),
           passwordHash: body.password ? await hashPassword(String(body.password)) : null,
           expiresAt,
           createdAt: Date.now(),
@@ -310,8 +331,8 @@ export default {
             if (!exists) return json({ error: "简历不存在" }, 400);
             s.resumeId = asString(body.resumeId);
           }
-          if (body.presentation || body.theme != null || body.layout != null) {
-            s.presentation = presentationFromBody(body, s.presentation);
+          if (body.presentation || body.theme != null || body.layout != null || body.orientation != null) {
+            s.presentation = presentationOverrideFromBody(body);
           }
           if (body.label != null) s.label = asString(body.label);
           if (body.clearPassword) s.passwordHash = null;

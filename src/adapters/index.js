@@ -1,5 +1,5 @@
 import { emptyCanonical, sanitizeCanonical, validateCanonical } from "../schema/resume.js";
-import { fromMofang, isMofang } from "./mofang.js";
+import { fromMofang, toMofang, isMofang } from "./mofang.js";
 import { fromNative, isNative } from "./native.js";
 
 export function detectFormat(raw) {
@@ -43,4 +43,4 @@ export function ingest(raw) {
   }
 }
 
-export { fromMofang, fromNative };
+export { fromMofang, toMofang, fromNative };

@@ -90,8 +90,10 @@ function updateSharePreview() {
   const layout = $("layout")?.value || "";
   let src = "/admin/preview/" + encodeURIComponent(id);
   const q = [];
-  if (theme) q.push("theme=" + encodeURIComponent(theme));
-  if (layout) q.push("layout=" + encodeURIComponent(layout));
+  if (theme && theme !== "inherit") q.push("theme=" + encodeURIComponent(theme));
+  if (layout && layout !== "inherit") q.push("layout=" + encodeURIComponent(layout));
+  const ori = $("orientation")?.value || "";
+  if (ori && ori !== "inherit") q.push("orientation=" + encodeURIComponent(ori));
   if (q.length) src += "?" + q.join("&");
   if (iframe.getAttribute("src") !== src) iframe.setAttribute("src", src);
   requestAnimationFrame(scaleThumbs);
@@ -261,7 +263,9 @@ async function drawShares() {
     meta.textContent = [
       s.label,
       s.resumeId,
-      s.theme ? themeLabel(s.theme) : "沿用简历主题",
+      s.theme ? themeLabel(s.theme) : "沿用主题",
+      s.orientation && s.orientation !== "inherit" ? (s.orientation === "landscape" ? "横版" : "竖版") : "沿用方向",
+      s.resumeMissing ? "来源简历已删除" : "",
       s.hasPassword ? "有密码" : "无密码",
       s.revoked ? "已撤销" : remain(s.expiresAt),
     ].filter(Boolean).join(" · ");
@@ -367,6 +371,7 @@ async function boot() {
   $("resumeId").addEventListener("change", updateSharePreview);
   $("theme").addEventListener("change", updateSharePreview);
   $("layout").addEventListener("change", updateSharePreview);
+  if ($("orientation")) $("orientation").addEventListener("change", updateSharePreview);
   $("modeCreate").onclick = () => setShareMode("create");
   $("modeEdit").onclick = () => setShareMode("edit");
   $("newBtn").onclick = createResume;
@@ -391,7 +396,7 @@ async function boot() {
       if (!list.length) throw new Error("先新建并保存一份简历");
       const resumeId = $("resumeId").value;
       if (!resumeId) throw new Error("选一份简历");
-      const body = { resumeId, theme: $("theme").value, layout: $("layout").value, label: $("label").value, ...expiryBody() };
+      const body = { resumeId, theme: $("theme").value, layout: $("layout").value, orientation: $("orientation")?.value, label: $("label").value, ...expiryBody() };
       if (shareMode === "create") {
         if ($("sharePw").value) body.password = $("sharePw").value;
         const s = await api("/api/shares", { method: "POST", body: JSON.stringify(body) });
@@ -420,7 +425,7 @@ async function boot() {
     location.href = "/login";
   };
   window.addEventListener("resize", scaleThumbs);
-  fillSelect($("theme"), [{ id: "", label: "沿用简历主题" }, ...THEMES]);
+  fillSelect($("theme"), [{ id: "inherit", label: "沿用简历主题" }, ...THEMES]);
   await refreshList();
   await drawShares();
   const q = new URLSearchParams(location.search);

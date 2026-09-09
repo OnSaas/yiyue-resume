@@ -28,12 +28,19 @@ function section(title, inner) {
   return `<section class="sec"><h2>${esc(title)}</h2>${inner}</section>`;
 }
 
-function profile(resume) {
+function profile(resume, presentation) {
   const b = resume.basics || {};
+  const r = presentation?.themeOverrides?.radius;
+  const radius = r != null && r !== "" ? `${r}px` : "8px";
+  const avatar = b.avatar
+    ? `<img class="avatar" src="${esc(b.avatar)}" alt="" style="border-radius:${esc(radius)}">`
+    : "";
   return `<div class="profile">
+    ${avatar}
     <h1 class="name">${esc(b.name || "")}</h1>
     ${b.nameEn ? `<p class="name-en">${esc(b.nameEn)}</p>` : ""}
     ${b.headline ? `<p class="job-title">${esc(b.headline)}</p>` : ""}
+    ${b.employmentStatus ? `<p class="muted">${esc(b.employmentStatus)}</p>` : ""}
     ${b.summary ? `<p class="tagline">${esc(b.summary)}</p>` : ""}
   </div>`;
 }
@@ -63,19 +70,21 @@ function listBlock(arr, empty) {
   return arr.map(job).join("");
 }
 
-function renderSection(id, resume) {
-  if (id === "profile") return profile(resume);
+function renderSection(id, resume, presentation) {
+  if (id === "profile") return profile(resume, presentation);
   if (id === "contact") return section("联系", contact(resume));
   if (id === "skills") return section("技能", skills(resume));
   if (id === "languages") return section("语言", (resume.languages || []).length ? `<ul>${resume.languages.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
   if (id === "certifications") return section("证书", (resume.certifications || []).length ? `<ul>${resume.certifications.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
+  if (id === "awards") return section("奖项", (resume.awards || []).length ? `<ul>${resume.awards.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
+  if (id === "publications") return section("著作", (resume.publications || []).length ? `<ul>${resume.publications.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
   if (id === "experience") return section("经历", listBlock(resume.experience, "这一版还没写经历。"));
   if (id === "projects") {
     const items = (resume.projects || []).map((p) => ({
       role: p.name,
       org: p.role,
       time: p.time,
-      points: p.points,
+      points: [...(p.points || []), p.url ? p.url : ""].filter(Boolean),
     }));
     return section("项目", listBlock(items, "这一版还没写项目。"));
   }
@@ -106,11 +115,14 @@ function header(resume) {
     })
     .join("");
   return `<header class="top">
-    <div>
+    <div class="identity">
+      ${b.avatar ? `<img class="avatar" src="${esc(b.avatar)}" alt="">` : ""}
+      <div>
       <h1 class="name">${esc(b.name || "")}</h1>
       ${b.nameEn ? `<p class="name-en">${esc(b.nameEn)}</p>` : ""}
       ${b.headline ? `<p class="job-title">${esc(b.headline)}</p>` : ""}
       ${b.summary ? `<p class="tagline">${esc(b.summary)}</p>` : ""}
+      </div>
     </div>
     <div class="meta">
       ${b.headline ? `<div class="variant">${esc(b.headline)}</div>` : ""}
@@ -126,7 +138,7 @@ export function renderResume(resume, presentationInput, context = {}) {
   const layout = resolveLayout(presentation);
   const cols = (layout.columns || [])
     .map((c) => {
-      const inner = (c.children || []).map((id) => renderSection(id, resume)).join("");
+      const inner = (c.children || []).map((id) => renderSection(id, resume, presentation)).join("");
       return `<div class="col" style="flex: ${c.width} 1 0">${inner}</div>`;
     })
     .join("");
@@ -145,25 +157,50 @@ export function renderResume(resume, presentationInput, context = {}) {
   ].join(";");
   const title = `${resume.basics?.name || "简历"}${resume.basics?.headline ? " · " + resume.basics.headline : ""}`;
   const note = context.note ? `<footer class="note">${esc(context.note)}</footer>` : "";
-  const sheet = `<article class="sheet layout-${esc(layout.id)}${compact}" data-layout="${esc(layout.id)}" data-layout-variant="${esc(layout.layoutVariant || "")}">
+  const ori = presentation.orientation === "landscape" ? "landscape" : "portrait";
+  const aspect = ori === "landscape" ? "297 / 210" : "210 / 297";
+  const pageSize = ori === "landscape" ? "A4 landscape" : "A4 portrait";
+  const sheet = `<article class="sheet layout-${esc(layout.id)}${compact}" data-layout="${esc(layout.id)}" data-layout-variant="${esc(layout.layoutVariant || "")}" data-orientation="${ori}">
     ${head}
     <div class="body cols">${cols}</div>
     ${note}
   </article>`;
+  const canvas = `<div class="stage"><div class="canvas" data-orientation="${ori}" style="aspect-ratio:${aspect}">${sheet}</div></div>
+<script>
+(function(){
+  var c=document.querySelector(".canvas"); if(!c) return;
+  var s=c.querySelector(".sheet"); if(!s) return;
+  function fit(){
+    var ori=c.getAttribute("data-orientation");
+    var aw=ori==="landscape"?297:210, ah=ori==="landscape"?210:297;
+    var max=Math.min((c.parentElement&&c.parentElement.clientWidth||window.innerWidth)-24, ori==="landscape"?1100:820);
+    if(max<160) max=160;
+    c.style.width=max+"px";
+    c.style.height=(max*ah/aw)+"px";
+    var scale=max/820;
+    s.style.width="820px";
+    s.style.transformOrigin="top left";
+    s.style.transform="scale("+scale+")";
+  }
+  fit();
+  addEventListener("resize", fit);
+})();
+</script>`;
   if (context.fragment) {
-    return `<div class="page" data-theme="${esc(presentation.theme)}" style="${vars};font-size:${theme.fontSize}px;line-height:${theme.lineHeight}">${sheet}</div>`;
+    return `<div class="page" data-theme="${esc(presentation.theme)}" data-orientation="${ori}" style="${vars};font-size:${theme.fontSize}px;line-height:${theme.lineHeight}">${canvas}</div>`;
   }
   return `<!DOCTYPE html>
-<html lang="zh-CN" data-theme="${esc(presentation.theme)}">
+<html lang="zh-CN" data-theme="${esc(presentation.theme)}" data-orientation="${ori}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>${esc(title)}</title>
   <link rel="stylesheet" href="/css/resume.css" />
+  <style>@page { size: ${pageSize}; margin: 12mm; }</style>
 </head>
 <body class="page" style="${vars}">
-  ${sheet}
+  ${canvas}
 </body>
 </html>`;
 }

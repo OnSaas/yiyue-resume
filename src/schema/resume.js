@@ -13,6 +13,8 @@ export function emptyCanonical() {
       email: "",
       phone: "",
       location: "",
+      birthDate: "",
+      employmentStatus: "",
     },
     links: [],
     experience: [],
@@ -24,6 +26,7 @@ export function emptyCanonical() {
     awards: [],
     publications: [],
     customSections: [],
+    extras: {},
   };
 }
 
@@ -74,6 +77,8 @@ export function sanitizeCanonical(raw) {
       email: clip(b.email, 200),
       phone: clip(b.phone, 80),
       location: clip(b.location, 120),
+      birthDate: clip(b.birthDate, 40),
+      employmentStatus: clip(b.employmentStatus, 80),
     },
     links: clipArr(raw?.links, link),
     experience: clipArr(raw?.experience, job),
@@ -85,6 +90,7 @@ export function sanitizeCanonical(raw) {
     awards: clipArr(raw?.awards, (s) => clip(s, 200)),
     publications: clipArr(raw?.publications, (s) => clip(s, 300)),
     customSections: clipArr(raw?.customSections, custom, 12),
+    extras: raw?.extras && typeof raw.extras === "object" ? raw.extras : {},
   };
 }
 

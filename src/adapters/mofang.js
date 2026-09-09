@@ -23,6 +23,8 @@ export function fromMofang(raw) {
   out.basics.phone = str(b.phone);
   out.basics.location = str(b.location);
   out.basics.avatar = str(b.photo);
+  out.basics.birthDate = str(b.birthDate);
+  out.basics.employmentStatus = str(b.employementStatus);
   out.basics.summary = htmlToPoints(raw.selfEvaluationContent).join(" ");
 
   const custom = Array.isArray(b.customFields) ? b.customFields : [];
@@ -69,7 +71,9 @@ export function fromMofang(raw) {
   }
 
   const certs = Array.isArray(raw.certificates) ? raw.certificates : [];
-  if (certs.length) out.certifications = certs.map((c) => str(c.url || c.name || "证书")).filter(Boolean);
+  if (certs.length) {
+    out.certifications = certs.map((c) => str(c.name || c.url || "证书")).filter(Boolean);
+  }
 
   const customData = raw.customData && typeof raw.customData === "object" ? raw.customData : {};
   const menus = Array.isArray(raw.menuSections) ? raw.menuSections : [];
@@ -89,8 +93,93 @@ export function fromMofang(raw) {
     });
   }
 
-  if (!out.basics.name && stripHtml(raw.title)) {
-    /* title is resume filename, not person */
-  }
+  out.extras = {
+    mofang: {
+      title: raw.title,
+      basic: {
+        photoConfig: b.photoConfig,
+        fieldOrder: b.fieldOrder,
+        icons: b.icons,
+        customFields: b.customFields,
+        layout: b.layout,
+        githubKey: b.githubKey,
+        githubUseName: b.githubUseName,
+        githubContributionsVisible: b.githubContributionsVisible,
+      },
+      menuSections: raw.menuSections,
+      globalSettings: raw.globalSettings,
+      certificates: raw.certificates,
+      skillContent: raw.skillContent,
+      selfEvaluationContent: raw.selfEvaluationContent,
+      templateId: raw.templateId,
+    },
+  };
   return sanitizeCanonical(out);
+}
+
+function pointsToHtml(points) {
+  const pts = (points || []).filter(Boolean);
+  if (!pts.length) return "";
+  return `<ul>${pts.map((p) => `<li>${String(p).replace(/</g, "&lt;")}</li>`).join("")}</ul>`;
+}
+
+export function toMofang(canonical) {
+  const c = canonical || emptyCanonical();
+  const extra = (c.extras && c.extras.mofang) || {};
+  const b = c.basics || {};
+  const basicExtra = extra.basic || {};
+  return {
+    title: extra.title || b.headline || b.name || "简历",
+    templateId: extra.templateId || null,
+    basic: {
+      ...basicExtra,
+      name: b.name,
+      title: b.headline,
+      email: b.email,
+      phone: b.phone,
+      location: b.location,
+      photo: b.avatar,
+      birthDate: b.birthDate,
+      employementStatus: b.employmentStatus,
+      customFields: Array.isArray(basicExtra.customFields) ? basicExtra.customFields : [],
+    },
+    education: (c.education || []).map((e, i) => {
+      const [startDate, endDate] = String(e.time || "").split(" – ");
+      return {
+        id: String(i + 1),
+        school: e.school,
+        major: e.major,
+        degree: e.degree,
+        startDate: startDate || "",
+        endDate: endDate || "",
+        visible: true,
+        gpa: "",
+        description: pointsToHtml(e.points),
+      };
+    }),
+    experience: (c.experience || []).map((e, i) => ({
+      id: String(i + 1),
+      company: e.org,
+      position: e.role,
+      date: e.time,
+      details: pointsToHtml(e.points),
+      visible: true,
+    })),
+    projects: (c.projects || []).map((p, i) => ({
+      id: String(i + 1),
+      name: p.name,
+      role: p.role,
+      date: p.time,
+      description: pointsToHtml(p.points),
+      visible: true,
+      link: p.url || "",
+      linkLabel: p.url || "",
+    })),
+    skillContent: extra.skillContent || pointsToHtml(c.skills),
+    selfEvaluationContent: extra.selfEvaluationContent || (b.summary || ""),
+    certificates: extra.certificates || (c.certifications || []).map((name, i) => ({ id: String(i + 1), url: "", name })),
+    menuSections: extra.menuSections || [],
+    globalSettings: extra.globalSettings || {},
+    customData: extra.customData || {},
+  };
 }

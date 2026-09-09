@@ -83,11 +83,13 @@ function rowJob(item = {}) {
   const role = field("职位/名称", item.role || "");
   const org = field("组织", item.org || "");
   const time = field("时间", item.time || "");
+  const url = field("链接", item.url || "");
   role.input.dataset.k = "role";
   org.input.dataset.k = "org";
   time.input.dataset.k = "time";
+  url.input.dataset.k = "url";
   time.el.classList.add("span2");
-  g.append(role.el, org.el, time.el);
+  g.append(role.el, org.el, time.el, url.el);
   const pts = document.createElement("div");
   pts.className = "field span2";
   const lab = document.createElement("label");
@@ -116,7 +118,7 @@ function fillRepeats() {
   const pro = $("projects");
   pro.replaceChildren();
   (r.projects || []).forEach((x) =>
-    pro.append(rowJob({ role: x.name, org: x.role, time: x.time, points: x.points }))
+    pro.append(rowJob({ role: x.name, org: x.role, time: x.time, points: x.points, url: x.url }))
   );
 }
 
@@ -150,7 +152,7 @@ function readForm() {
       basics: {
         name: fieldVal("name").value,
         nameEn: fieldVal("nameEn").value,
-        headline: fieldVal("variant").value,
+        headline: fieldVal("headline")?.value || fieldVal("variant")?.value || "",
         summary: fieldVal("tagline").value,
         avatar: data.resume?.basics?.avatar || "",
         email: data.resume?.basics?.email || "",
@@ -161,13 +163,14 @@ function readForm() {
       contact: [],
       experience: collectList($("experience"), "job"),
       education: data.resume?.education || [],
-      projects: collectList($("projects"), "job").map((p) => ({
+      projects: collectList($("projects"), "job").map((p, i) => ({
         name: p.role,
         role: p.org,
         time: p.time,
-        url: "",
+        url: p.url || data.resume?.projects?.[i]?.url || "",
         points: p.points,
       })),
+      extras: data.resume?.extras || {},
       skills: collectList($("skills"), "skills"),
       languages: data.resume?.languages || [],
       certifications: data.resume?.certifications || [],
@@ -177,9 +180,14 @@ function readForm() {
     },
     presentation: {
       layout: fieldVal("layout")?.value || "classic",
-      layoutVariant: "",
+      layoutVariant: fieldVal("layoutVariant")?.value || "",
       theme: fieldVal("theme").value || "paper",
-      themeOverrides: data.presentation?.themeOverrides || {},
+      orientation: fieldVal("orientation")?.value || "portrait",
+      themeOverrides: {
+        ...(data.presentation?.themeOverrides || {}),
+        accentColor: fieldVal("accentColor")?.value || undefined,
+        fontSize: fieldVal("fontSize")?.value || undefined,
+      },
     },
   };
 }
@@ -189,10 +197,14 @@ function writeForm(doc) {
   const b = r.basics || {};
   fieldVal("name").value = b.name || "";
   fieldVal("nameEn").value = b.nameEn || "";
-  fieldVal("variant").value = b.headline || "";
+  fieldVal("headline").value = b.headline || "";
   fieldVal("tagline").value = b.summary || "";
   fieldVal("theme").value = doc.presentation?.theme || "paper";
   if (fieldVal("layout")) fieldVal("layout").value = doc.presentation?.layout || "classic";
+  if (fieldVal("layoutVariant")) fieldVal("layoutVariant").value = doc.presentation?.layoutVariant || "left";
+  if (fieldVal("orientation")) fieldVal("orientation").value = doc.presentation?.orientation || "portrait";
+  if (fieldVal("accentColor")) fieldVal("accentColor").value = doc.presentation?.themeOverrides?.accentColor || "";
+  if (fieldVal("fontSize")) fieldVal("fontSize").value = doc.presentation?.themeOverrides?.fontSize || "";
   $("editTitle").textContent = b.headline || b.name || doc.id;
   $("json").value = JSON.stringify(r, null, 2);
 }
@@ -245,6 +257,45 @@ async function boot() {
   sync();
 
   $("form").addEventListener("input", sync);
+  $("form").addEventListener("change", () => {
+    const wrap = $("variantWrap");
+    if (wrap && fieldVal("layout")) wrap.hidden = fieldVal("layout").value !== "sidebar";
+  });
+  if ($("importMofangBtn")) {
+    $("importMofangBtn").onclick = () => $("importMofangFile").click();
+    $("importMofangFile").onchange = async () => {
+      const f = $("importMofangFile").files?.[0];
+      if (!f) return;
+      $("formErr").textContent = "";
+      try {
+        const raw = JSON.parse(await f.text());
+        const saved = await api("/api/resumes/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify(raw) });
+        data = saved;
+        writeForm(data);
+        fillRepeats();
+        sync();
+        $("importHint").textContent = "已识别为魔方简历 JSON";
+        toast("已导入魔方 JSON");
+      } catch (e) {
+        $("formErr").textContent = e.message;
+        $("importHint").textContent = "";
+      }
+    };
+  }
+  if ($("exportMofangBtn")) {
+    $("exportMofangBtn").onclick = async () => {
+      try {
+        const m = await api("/api/resumes/" + encodeURIComponent(id) + "/mofang");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(m, null, 2)], { type: "application/json" }));
+        a.download = id + "-mofang.json";
+        a.click();
+        toast("已导出魔方 JSON");
+      } catch (e) {
+        $("formErr").textContent = e.message;
+      }
+    };
+  }
   $("backBtn").onclick = () => { location.href = "/admin"; };
   $("saveBtn").onclick = async () => {
     $("formErr").textContent = "";
