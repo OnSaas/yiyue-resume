@@ -4,14 +4,22 @@ const enc = new TextEncoder();
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", ...headers },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      ...headers,
+    },
   });
 }
 
 function html(body, status = 200, headers = {}) {
   return new Response(body, {
     status,
-    headers: { "content-type": "text/html; charset=utf-8", ...headers },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      ...headers,
+    },
   });
 }
 
@@ -112,6 +120,62 @@ async function kvList(env, key) {
 
 async function kvListPut(env, key, list) {
   await env.RESUME_KV.put(key, JSON.stringify(list));
+}
+
+async function mergeIndex(env, prefix, indexKey) {
+  const fromIndex = await kvList(env, indexKey);
+  const fromKv = [];
+  let cursor;
+  do {
+    const page = await env.RESUME_KV.list({ prefix, limit: 1000, cursor });
+    for (const k of page.keys) {
+      if (k.name === indexKey) continue;
+      fromKv.push(k.name.slice(prefix.length));
+    }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  const seen = new Set();
+  const merged = [];
+  for (const id of fromIndex.concat(fromKv)) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    merged.push(id);
+  }
+  if (JSON.stringify(merged) !== JSON.stringify(fromIndex)) {
+    await kvListPut(env, indexKey, merged);
+  }
+  return merged;
+}
+
+function parseExpiry(body) {
+  if (body.expiresAt === null || body.expiresAt === "never" || body.ttl === "never") {
+    return { expiresAt: null };
+  }
+  if (body.expiresAt != null && body.expiresAt !== "") {
+    const expiresAt = Number(body.expiresAt);
+    if (!Number.isFinite(expiresAt)) throw new Error("expiresAt 无效");
+    return { expiresAt };
+  }
+  if (body.ttlSec != null && body.ttlSec !== "") {
+    const sec = Number(body.ttlSec);
+    if (!Number.isFinite(sec) || sec <= 0) throw new Error("ttl 无效");
+    return { expiresAt: Date.now() + sec * 1000 };
+  }
+  return undefined;
+}
+
+function sharePublic(s) {
+  return {
+    token: s.token,
+    resumeId: s.resumeId,
+    theme: s.theme || "",
+    hasPassword: !!s.passwordHash,
+    expiresAt: s.expiresAt,
+    createdAt: s.createdAt,
+    revoked: !!s.revoked,
+    label: s.label || "",
+    url: "/s/" + s.token,
+  };
 }
 
 function asString(v) {
@@ -444,7 +508,7 @@ export default {
       if (denied) return denied;
 
       if (path === "/api/resumes" && method === "GET") {
-        const ids = await kvList(env, "resume:index");
+        const ids = await mergeIndex(env, "resume:", "resume:index");
         const resumes = [];
         for (const id of ids) {
           const raw = await env.RESUME_KV.get("resume:" + id);
@@ -502,23 +566,12 @@ export default {
       }
 
       if (path === "/api/shares" && method === "GET") {
-        const tokens = await kvList(env, "share:index");
+        const tokens = await mergeIndex(env, "share:", "share:index");
         const shares = [];
         for (const token of tokens) {
           const raw = await env.RESUME_KV.get("share:" + token);
           if (!raw) continue;
-          const s = JSON.parse(raw);
-          shares.push({
-            token: s.token,
-            resumeId: s.resumeId,
-            theme: s.theme || "",
-            hasPassword: !!s.passwordHash,
-            expiresAt: s.expiresAt,
-            createdAt: s.createdAt,
-            revoked: !!s.revoked,
-            label: s.label || "",
-            url: "/s/" + s.token,
-          });
+          shares.push(sharePublic(JSON.parse(raw)));
         }
         return json({ shares });
       }
@@ -533,15 +586,11 @@ export default {
         let theme = asString(body.theme);
         if (theme && !THEMES.includes(theme)) return json({ error: "未知主题" }, 400);
         let expiresAt = null;
-        if (body.expiresAt === null || body.expiresAt === "never" || body.ttl === "never") {
-          expiresAt = null;
-        } else if (body.expiresAt != null && body.expiresAt !== "") {
-          expiresAt = Number(body.expiresAt);
-          if (!Number.isFinite(expiresAt)) return json({ error: "expiresAt 无效" }, 400);
-        } else if (body.ttlSec != null && body.ttlSec !== "") {
-          const sec = Number(body.ttlSec);
-          if (!Number.isFinite(sec) || sec <= 0) return json({ error: "ttl 无效" }, 400);
-          expiresAt = Date.now() + sec * 1000;
+        try {
+          const exp = parseExpiry(body);
+          if (exp) expiresAt = exp.expiresAt;
+        } catch (e) {
+          return json({ error: e.message }, 400);
         }
         const token = token128();
         const share = {
@@ -562,15 +611,48 @@ export default {
       }
 
       const sh = path.match(/^\/api\/shares\/([^/]+)$/);
-      if (sh && method === "DELETE") {
+      if (sh) {
         const token = decodeURIComponent(sh[1]);
-        const raw = await env.RESUME_KV.get("share:" + token);
-        if (raw) {
-          const s = JSON.parse(raw);
-          s.revoked = true;
-          await env.RESUME_KV.put("share:" + token, JSON.stringify(s));
+        if (method === "DELETE") {
+          const raw = await env.RESUME_KV.get("share:" + token);
+          if (raw) {
+            const s = JSON.parse(raw);
+            s.revoked = true;
+            await env.RESUME_KV.put("share:" + token, JSON.stringify(s));
+          }
+          return json({ ok: true });
         }
-        return json({ ok: true });
+        if (method === "PATCH") {
+          const raw = await env.RESUME_KV.get("share:" + token);
+          if (!raw) return json({ error: "不存在" }, 404);
+          const s = JSON.parse(raw);
+          if (s.revoked) return json({ error: "已撤销，不能改" }, 400);
+          let body;
+          try { body = await req.json(); } catch { return json({ error: "坏 JSON" }, 400); }
+          if (body.resumeId != null && body.resumeId !== "") {
+            const resumeId = asString(body.resumeId);
+            const exists = await env.RESUME_KV.get("resume:" + resumeId);
+            if (!exists) return json({ error: "简历不存在" }, 400);
+            s.resumeId = resumeId;
+          }
+          if (body.theme != null) {
+            const theme = asString(body.theme);
+            if (theme && !THEMES.includes(theme)) return json({ error: "未知主题" }, 400);
+            s.theme = theme;
+          }
+          if (body.label != null) s.label = asString(body.label);
+          if (body.clearPassword) s.passwordHash = null;
+          else if (body.password) s.passwordHash = await sha256hex(String(body.password));
+          try {
+            const exp = parseExpiry(body);
+            if (exp) s.expiresAt = exp.expiresAt;
+          } catch (e) {
+            return json({ error: e.message }, 400);
+          }
+          s.token = token;
+          await env.RESUME_KV.put("share:" + token, JSON.stringify(s));
+          return json(sharePublic(s));
+        }
       }
 
       return json({ error: "无此接口" }, 404);

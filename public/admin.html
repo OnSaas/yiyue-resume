@@ -5,43 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>简历后台</title>
-  <link rel="stylesheet" href="/css/resume.css" />
   <link rel="stylesheet" href="/css/admin.css" />
 </head>
 <body>
-  <div class="app">
+  <header class="topbar">
+    <div class="topbar-title">简历后台</div>
+    <nav class="tabs" aria-label="工作台">
+      <button class="tab on" type="button" data-bench="resumes" id="tabResumes">简历</button>
+      <button class="tab" type="button" data-bench="shares" id="tabShares">分享</button>
+    </nav>
+    <button class="btn ghost" type="button" id="outBtn">退出</button>
+  </header>
+
+  <section class="bench" id="benchResumes">
     <aside class="side">
-      <h1>简历</h1>
       <div class="row">
-        <button class="btn" id="newBtn" type="button">新建</button>
-        <button class="btn ghost" id="importBtn" type="button">导入 JSON</button>
+        <button class="btn" type="button" id="newBtn">新建</button>
+        <button class="btn ghost" type="button" id="importBtn">导入</button>
         <input id="importFile" type="file" accept="application/json" hidden />
       </div>
+      <p class="muted" id="count"></p>
       <div id="list" class="list"></div>
-      <p><button class="btn ghost" id="outBtn" type="button">退出</button></p>
     </aside>
-    <section class="main">
-      <h2>JSON</h2>
-      <p class="muted">一份简历一份 JSON。缺字段会补默认；结构不是对象会拒绝。</p>
+    <div class="main">
+      <p class="muted">一份一 JSON。未保存的新建不进左侧。同 id 保存覆盖。</p>
       <div class="field span2">
+        <label for="json">简历 JSON</label>
         <textarea id="json" spellcheck="false"></textarea>
       </div>
       <div class="row">
-        <button class="btn" id="saveBtn" type="button">保存</button>
-        <button class="btn ghost" id="exportBtn" type="button">导出</button>
-        <button class="btn ghost" id="previewBtn" type="button">预览</button>
-        <button class="btn danger" id="delBtn" type="button">删除</button>
+        <button class="btn" type="button" id="saveBtn">保存</button>
+        <button class="btn ghost" type="button" id="exportBtn">导出</button>
+        <button class="btn ghost" type="button" id="previewBtn">预览</button>
+        <button class="btn danger" type="button" id="delBtn">删除</button>
       </div>
       <p class="err" id="jsonErr"></p>
+    </div>
+  </section>
 
-      <h2>生成分享</h2>
+  <section class="bench hidden" id="benchShares">
+    <div class="main share-main">
+      <div class="tabs" id="shareMode">
+        <button class="tab on" type="button" data-mode="create" id="modeCreate">生成</button>
+        <button class="tab" type="button" data-mode="edit" id="modeEdit">修改</button>
+      </div>
+      <p class="muted" id="shareHint">生成会发新 token。修改时 URL 不变。</p>
+      <p class="url" id="editToken" hidden></p>
       <div class="grid">
         <div class="field">
-          <label>主题</label>
+          <label for="resumeId">简历</label>
+          <select id="resumeId"></select>
+        </div>
+        <div class="field">
+          <label for="theme">主题</label>
           <select id="theme"></select>
         </div>
         <div class="field">
-          <label>有效期</label>
+          <label for="ttl">有效期</label>
           <select id="ttl">
             <option value="3600">1 小时</option>
             <option value="86400">24 小时</option>
@@ -52,25 +72,37 @@
           </select>
         </div>
         <div class="field">
-          <label>自定义秒</label>
+          <label for="ttlCustom">自定义秒</label>
           <input id="ttlCustom" type="number" min="60" placeholder="秒" />
         </div>
         <div class="field">
-          <label>分享密码（可空）</label>
+          <label for="sharePw">密码</label>
           <input id="sharePw" type="password" autocomplete="new-password" />
         </div>
+        <div class="field" id="clearPwWrap" hidden>
+          <label for="clearPw">去掉密码</label>
+          <select id="clearPw">
+            <option value="no" selected>否</option>
+            <option value="yes">是，变成无密码</option>
+          </select>
+        </div>
         <div class="field span2">
-          <label>备注</label>
+          <label for="label">备注</label>
           <input id="label" placeholder="给招聘方 A" />
         </div>
       </div>
-      <button class="btn" id="shareBtn" type="button">生成 /s/token</button>
-      <p class="muted" id="shareOut"></p>
+      <div class="row">
+        <button class="btn" type="button" id="shareBtn">生成链接</button>
+        <button class="btn ghost" type="button" id="resetShareBtn">清空表单</button>
+      </div>
+      <p class="url" id="shareOut"></p>
+      <p class="err" id="shareErr"></p>
 
-      <h2>分享列表</h2>
+      <h2>已发出</h2>
       <div id="shares"></div>
-    </section>
-  </div>
+    </div>
+  </section>
+
   <div class="status" id="status"></div>
   <script type="module" src="/js/admin.js"></script>
 </body>
