@@ -1,0 +1,15 @@
+{
+  "title": "自定义字段",
+  "basic": {
+    "name": "宋哈娜",
+    "title": "前端",
+    "customFields": [{ "label": "站点", "value": "https://hana.dev" }],
+    "fieldOrder": ["name", "title"]
+  },
+  "experience": [{ "company": "Acme", "position": "工程师", "date": "2020-2024", "details": "<ul><li>做了 A</li></ul>", "visible": true }],
+  "education": [],
+  "projects": [],
+  "menuSections": [],
+  "globalSettings": { "themeColor": "#000" },
+  "skillContent": "<ul><li>Workers</li></ul>"
+}

@@ -27,6 +27,7 @@ const id = decodeURIComponent(location.pathname.replace(/^\/admin\/e\//, "").rep
 if (!id) location.href = "/admin";
 
 let data = { resume: null, presentation: { layout: "classic", theme: "paper" } };
+let pendingImport = null;
 
 function rowLink(item = {}) {
   const wrap = document.createElement("div");
@@ -249,6 +250,18 @@ function layoutA4() {
   sizer.style.height = sh * scale + "px";
 }
 
+async function previewImport(raw) {
+  $("formErr").textContent = "";
+  const got = await api("/api/import", { method: "POST", body: JSON.stringify({ payload: raw }) });
+  pendingImport = got;
+  const fmt = got.format === "mofang" ? "魔方简历 JSON" : got.format === "yiyue-project" ? "项目 JSON" : got.format;
+  const s = got.stats || {};
+  $("importHint").textContent = `已识别为${fmt} · 经历 ${s.experience || 0} · 项目 ${s.projects || 0}` +
+    (got.warnings?.length ? ` · ${got.warnings.length} 条提示` : "");
+  if ($("importConfirmBtn")) $("importConfirmBtn").hidden = false;
+  toast("预览导入结果，确认后才替换");
+}
+
 async function boot() {
   if (!$("saveBtn") || !$("form")) throw new Error("编辑页节点缺失");
   data = await api("/api/resumes/" + encodeURIComponent(id));
@@ -266,20 +279,35 @@ async function boot() {
     $("importMofangFile").onchange = async () => {
       const f = $("importMofangFile").files?.[0];
       if (!f) return;
-      $("formErr").textContent = "";
       try {
-        const raw = JSON.parse(await f.text());
-        const saved = await api("/api/resumes/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify(raw) });
-        data = saved;
-        writeForm(data);
-        fillRepeats();
-        sync();
-        $("importHint").textContent = "已识别为魔方简历 JSON";
-        toast("已导入魔方 JSON");
+        await previewImport(JSON.parse(await f.text()));
       } catch (e) {
         $("formErr").textContent = e.message;
         $("importHint").textContent = "";
       }
+    };
+  }
+  if ($("importPasteBtn")) {
+    $("importPasteBtn").onclick = async () => {
+      $("formErr").textContent = "";
+      try {
+        await previewImport(JSON.parse($("json").value));
+      } catch (e) {
+        $("formErr").textContent = e.message;
+      }
+    };
+  }
+  if ($("importConfirmBtn")) {
+    $("importConfirmBtn").onclick = () => {
+      if (!pendingImport?.canonical) return;
+      data.resume = pendingImport.canonical;
+      writeForm(data);
+      fillRepeats();
+      sync();
+      $("importHint").textContent = "已替换当前简历（未保存）";
+      $("importConfirmBtn").hidden = true;
+      pendingImport = null;
+      toast("已应用到表单，记得保存");
     };
   }
   if ($("exportMofangBtn")) {
@@ -312,11 +340,12 @@ async function boot() {
   };
   $("exportBtn").onclick = () => {
     sync();
+    const payload = { format: "yiyue-project", version: 1, resume: data.resume, presentation: data.presentation };
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data.resume, null, 2)], { type: "application/json" }));
-    a.download = data.id + ".json";
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    a.download = (data.id || id) + "-project.json";
     a.click();
-    toast("已导出");
+    toast("已导出项目 JSON");
   };
   $("fullBtn").onclick = async () => {
     sync();

@@ -12,7 +12,10 @@ OnSaas / EdgeNux Workers + KV。`/` 不展示简历；访客只走 `/s/<token>`�
 
 Layout: `classic` / `sidebar` / `two-column` / `compact`  
 Theme: `paper` / `ink` / `night` / `plain`  
-可自由组合。分享记录保存自己的 `presentation`。
+Canvas: A4 竖版 / 横版（手机只 scale，不改 Layout）  
+可自由组合。分享记录保存自己的 `presentation`（空=inherit）。
+
+导入走 `POST /api/import`（预览，不落库），确认后再保存。
 
 ## 测试
 

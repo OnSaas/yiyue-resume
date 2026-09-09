@@ -1,109 +1,9 @@
 import { esc, safeHref } from "../utils/html.js";
 import { resolveTheme } from "./registry/themes.js";
 import { resolveLayout } from "./registry/layouts.js";
+import { renderSection } from "./registry/sections.js";
 import { normalizePresentation } from "../schema/presentation.js";
-
-function points(list) {
-  const pts = (list || []).filter(Boolean);
-  if (!pts.length) return "";
-  return `<ul>${pts.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`;
-}
-
-function job(item) {
-  const role = item.role || item.name || "";
-  const org = item.org || item.school || "";
-  return `<article class="job">
-    <div class="job-head">
-      <div>
-        <span class="job-role">${esc(role)}</span>
-        ${org ? `<span class="job-org"> · ${esc(org)}</span>` : ""}
-      </div>
-      <div class="job-time">${esc(item.time || "")}</div>
-    </div>${points(item.points)}
-  </article>`;
-}
-
-function section(title, inner) {
-  if (!inner) return "";
-  return `<section class="sec"><h2>${esc(title)}</h2>${inner}</section>`;
-}
-
-function profile(resume, presentation) {
-  const b = resume.basics || {};
-  const r = presentation?.themeOverrides?.radius;
-  const radius = r != null && r !== "" ? `${r}px` : "8px";
-  const avatar = b.avatar
-    ? `<img class="avatar" src="${esc(b.avatar)}" alt="" style="border-radius:${esc(radius)}">`
-    : "";
-  return `<div class="profile">
-    ${avatar}
-    <h1 class="name">${esc(b.name || "")}</h1>
-    ${b.nameEn ? `<p class="name-en">${esc(b.nameEn)}</p>` : ""}
-    ${b.headline ? `<p class="job-title">${esc(b.headline)}</p>` : ""}
-    ${b.employmentStatus ? `<p class="muted">${esc(b.employmentStatus)}</p>` : ""}
-    ${b.summary ? `<p class="tagline">${esc(b.summary)}</p>` : ""}
-  </div>`;
-}
-
-function contact(resume) {
-  const b = resume.basics || {};
-  const rows = [];
-  if (b.email) rows.push(`<p><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></p>`);
-  if (b.phone) rows.push(`<p>${esc(b.phone)}</p>`);
-  if (b.location) rows.push(`<p>${esc(b.location)}</p>`);
-  for (const l of resume.links || []) {
-    if (!l.label) continue;
-    const href = safeHref(l.href);
-    rows.push(href ? `<p><a href="${esc(href)}">${esc(l.label)}</a></p>` : `<p>${esc(l.label)}</p>`);
-  }
-  return rows.join("") || `<p class="empty">未放联系方式</p>`;
-}
-
-function skills(resume) {
-  const list = (resume.skills || []).filter(Boolean);
-  if (!list.length) return "";
-  return `<ul>${list.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`;
-}
-
-function listBlock(arr, empty) {
-  if (!arr || !arr.length) return empty ? `<p class="empty">${esc(empty)}</p>` : "";
-  return arr.map(job).join("");
-}
-
-function renderSection(id, resume, presentation) {
-  if (id === "profile") return profile(resume, presentation);
-  if (id === "contact") return section("联系", contact(resume));
-  if (id === "skills") return section("技能", skills(resume));
-  if (id === "languages") return section("语言", (resume.languages || []).length ? `<ul>${resume.languages.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
-  if (id === "certifications") return section("证书", (resume.certifications || []).length ? `<ul>${resume.certifications.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
-  if (id === "awards") return section("奖项", (resume.awards || []).length ? `<ul>${resume.awards.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
-  if (id === "publications") return section("著作", (resume.publications || []).length ? `<ul>${resume.publications.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : "");
-  if (id === "experience") return section("经历", listBlock(resume.experience, "这一版还没写经历。"));
-  if (id === "projects") {
-    const items = (resume.projects || []).map((p) => ({
-      role: p.name,
-      org: p.role,
-      time: p.time,
-      points: [...(p.points || []), p.url ? p.url : ""].filter(Boolean),
-    }));
-    return section("项目", listBlock(items, "这一版还没写项目。"));
-  }
-  if (id === "education") {
-    const items = (resume.education || []).map((e) => ({
-      role: e.school,
-      org: [e.major, e.degree].filter(Boolean).join(" · "),
-      time: e.time,
-      points: e.points,
-    }));
-    return section("教育", listBlock(items, ""));
-  }
-  if (id === "custom") {
-    return (resume.customSections || [])
-      .map((s) => section(s.title || s.id, listBlock(s.items, "")))
-      .join("");
-  }
-  return "";
-}
+import { resolveCanvas } from "../domain/canvas.js";
 
 function header(resume) {
   const b = resume.basics || {};
@@ -134,6 +34,7 @@ function header(resume) {
 
 export function renderResume(resume, presentationInput, context = {}) {
   const presentation = normalizePresentation(presentationInput);
+  const canvas = resolveCanvas(presentation);
   const theme = resolveTheme(presentation);
   const layout = resolveLayout(presentation);
   const cols = (layout.columns || [])
@@ -157,15 +58,13 @@ export function renderResume(resume, presentationInput, context = {}) {
   ].join(";");
   const title = `${resume.basics?.name || "简历"}${resume.basics?.headline ? " · " + resume.basics.headline : ""}`;
   const note = context.note ? `<footer class="note">${esc(context.note)}</footer>` : "";
-  const ori = presentation.orientation === "landscape" ? "landscape" : "portrait";
-  const aspect = ori === "landscape" ? "297 / 210" : "210 / 297";
-  const pageSize = ori === "landscape" ? "A4 landscape" : "A4 portrait";
+  const ori = canvas.orientation;
   const sheet = `<article class="sheet layout-${esc(layout.id)}${compact}" data-layout="${esc(layout.id)}" data-layout-variant="${esc(layout.layoutVariant || "")}" data-orientation="${ori}">
     ${head}
     <div class="body cols">${cols}</div>
     ${note}
   </article>`;
-  const canvas = `<div class="stage"><div class="canvas" data-orientation="${ori}" style="aspect-ratio:${aspect}">${sheet}</div></div>
+  const canvasHtml = `<div class="stage"><div class="canvas" data-orientation="${ori}" data-canvas="${esc(canvas.id)}" style="aspect-ratio:${canvas.aspect}">${sheet}</div></div>
 <script>
 (function(){
   var c=document.querySelector(".canvas"); if(!c) return;
@@ -187,7 +86,7 @@ export function renderResume(resume, presentationInput, context = {}) {
 })();
 </script>`;
   if (context.fragment) {
-    return `<div class="page" data-theme="${esc(presentation.theme)}" data-orientation="${ori}" style="${vars};font-size:${theme.fontSize}px;line-height:${theme.lineHeight}">${canvas}</div>`;
+    return `<div class="page" data-theme="${esc(presentation.theme)}" data-orientation="${ori}" style="${vars};font-size:${theme.fontSize}px;line-height:${theme.lineHeight}">${canvasHtml}</div>`;
   }
   return `<!DOCTYPE html>
 <html lang="zh-CN" data-theme="${esc(presentation.theme)}" data-orientation="${ori}">
@@ -197,10 +96,10 @@ export function renderResume(resume, presentationInput, context = {}) {
   <meta name="robots" content="noindex" />
   <title>${esc(title)}</title>
   <link rel="stylesheet" href="/css/resume.css" />
-  <style>@page { size: ${pageSize}; margin: 12mm; }</style>
+  <style>@page { size: ${canvas.pageSize}; margin: 12mm; }</style>
 </head>
 <body class="page" style="${vars}">
-  ${canvas}
+  ${canvasHtml}
 </body>
 </html>`;
 }

@@ -1,0 +1,13 @@
+{
+  "title": "带头像",
+  "basic": {
+    "name": "宋哈娜",
+    "title": "前端",
+    "email": "a@b.com",
+    "photo": "https://example.com/a.png",
+    "photoConfig": { "width": 90, "height": 120 }
+  },
+  "experience": [],
+  "projects": [{ "name": "X", "role": "负责人", "date": "2021", "description": "<li>上线</li>", "link": "https://x.dev" }],
+  "skillContent": "<ul><li>React</li></ul>"
+}

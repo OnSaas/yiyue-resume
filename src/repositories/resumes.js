@@ -1,11 +1,14 @@
 import { ingest } from "../adapters/index.js";
 import { emptyCanonical, sanitizeCanonical } from "../schema/resume.js";
-import { emptyPresentation, normalizePresentation } from "../schema/presentation.js";
+import { normalizePresentation } from "../schema/presentation.js";
 
 function asDoc(id, parsed) {
   if (parsed && parsed.resume && parsed.resume.basics) {
     return {
       id,
+      schemaVersion: parsed.schemaVersion || 1,
+      createdAt: parsed.createdAt,
+      updatedAt: parsed.updatedAt,
       resume: sanitizeCanonical(parsed.resume),
       presentation: normalizePresentation(parsed.presentation || parsed),
     };
@@ -18,7 +21,14 @@ function asDoc(id, parsed) {
     themeOverrides: parsed?.themeOverrides,
     ...(parsed?.presentation || {}),
   });
-  return { id, resume: got.ok ? got.resume : emptyCanonical(), presentation };
+  return {
+    id,
+    schemaVersion: 1,
+    createdAt: parsed?.createdAt,
+    updatedAt: parsed?.updatedAt,
+    resume: got.ok ? got.resume : emptyCanonical(),
+    presentation,
+  };
 }
 
 export function resumeRepository(kv) {
@@ -46,9 +56,13 @@ export function resumeRepository(kv) {
         return null;
       }
     },
-    async save(id, { resume, presentation }) {
+    async save(id, { resume, presentation, createdAt }) {
+      const now = Date.now();
       const doc = {
         id,
+        schemaVersion: 1,
+        createdAt: createdAt || now,
+        updatedAt: now,
         resume: sanitizeCanonical(resume || emptyCanonical()),
         presentation: normalizePresentation(presentation),
       };

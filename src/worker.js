@@ -1,11 +1,12 @@
-import { ingest } from "./adapters/index.js";
+import { ingest, listAdapters } from "./adapters/index.js";
 import { renderResume } from "./renderer/engine.js";
 import { resumeRepository } from "./repositories/resumes.js";
 import { shareRepository } from "./repositories/shares.js";
-import { emptyCanonical } from "./schema/resume.js";
-import { emptyPresentation, normalizePresentation, resolvePresentation, THEMES, LAYOUTS } from "./schema/presentation.js";
+import { emptyPresentation, resolvePresentation, THEMES, LAYOUTS, ORIENTATIONS } from "./schema/presentation.js";
 import { toMofang } from "./adapters/mofang.js";
 import { hashPassword, verifyPassword } from "./share/security.js";
+import { importPayload } from "./services/import.js";
+import { mergeCanonical } from "./domain/patch.js";
 
 const enc = new TextEncoder();
 
@@ -224,7 +225,17 @@ export default {
       if (denied) return denied;
 
       if (path === "/api/meta" && method === "GET") {
-        return json({ layouts: LAYOUTS, themes: THEMES });
+        return json({ layouts: LAYOUTS, themes: THEMES, orientations: ORIENTATIONS, adapters: listAdapters() });
+      }
+
+      if (path === "/api/import" && method === "POST") {
+        let body;
+        try { body = await req.json(); } catch { return json({ error: "坏 JSON", code: "IMPORT_INVALID_FORMAT" }, 400); }
+        const got = importPayload(body.payload ?? body.json ?? body);
+        if (!got.ok) {
+          return json({ ok: false, error: got.errors.join("；"), code: "IMPORT_INVALID_FORMAT", errors: got.errors, format: got.format, warnings: got.warnings, stats: got.stats }, 400);
+        }
+        return json({ ok: true, format: got.format, canonical: got.canonical, warnings: got.warnings, stats: got.stats });
       }
 
       if (path === "/api/preview" && method === "POST") {
@@ -250,8 +261,14 @@ export default {
       const mofangPath = path.match(/^\/api\/resumes\/([^/]+)\/mofang$/);
       if (mofangPath && method === "GET") {
         const doc = await resumes.get(decodeURIComponent(mofangPath[1]));
-        if (!doc) return json({ error: "不存在" }, 404);
+        if (!doc) return json({ error: "不存在", code: "RESUME_NOT_FOUND" }, 404);
         return json(toMofang(doc.resume));
+      }
+      const projectPath = path.match(/^\/api\/resumes\/([^/]+)\/project$/);
+      if (projectPath && method === "GET") {
+        const doc = await resumes.get(decodeURIComponent(projectPath[1]));
+        if (!doc) return json({ error: "不存在", code: "RESUME_NOT_FOUND" }, 404);
+        return json({ format: "yiyue-project", version: 1, resume: doc.resume, presentation: doc.presentation });
       }
       const one = path.match(/^\/api\/resumes\/([^/]+)$/);
       if (one) {
@@ -266,11 +283,9 @@ export default {
           const got = ingest(body.resume || body);
           if (!got.ok) return json({ error: got.errors.join("；"), errors: got.errors }, 400);
           const prev = await resumes.get(id);
-          if (prev?.resume?.extras && !(got.resume.extras && got.resume.extras.mofang)) {
-            got.resume.extras = prev.resume.extras;
-          }
+          const resume = mergeCanonical(prev?.resume, got.resume);
           const presentation = presentationFromBody(body, prev?.presentation);
-          const doc = await resumes.save(id, { resume: got.resume, presentation });
+          const doc = await resumes.save(id, { resume, presentation, createdAt: prev?.createdAt });
           return json(doc);
         }
         if (method === "DELETE") {

@@ -2,8 +2,11 @@ const MAX_STR = 8000;
 const MAX_ARR = 80;
 const MAX_JSON = 200_000;
 
+export const SCHEMA_VERSION = 1;
+
 export function emptyCanonical() {
   return {
+    schemaVersion: SCHEMA_VERSION,
     basics: {
       name: "",
       nameEn: "",
@@ -68,6 +71,7 @@ export function sanitizeCanonical(raw) {
     items: clipArr(x?.items, job, 40),
   });
   return {
+    schemaVersion: SCHEMA_VERSION,
     basics: {
       name: clip(b.name, 80),
       nameEn: clip(b.nameEn, 80),

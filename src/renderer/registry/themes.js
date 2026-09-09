@@ -64,4 +64,13 @@ export function resolveTheme(presentation) {
   return base;
 }
 
+export function themeTokens(id) {
+  const t = THEME_TOKENS[id] || THEME_TOKENS.paper;
+  return {
+    colors: { primary: t.primaryColor, accent: t.accentColor, muted: t.mutedColor, background: t.background, page: t.page, border: t.borderColor },
+    typography: { fontFamily: t.fontFamily, headingFont: t.headingFont, fontSize: t.fontSize, lineHeight: t.lineHeight },
+    shape: { radius: t.radius },
+  };
+}
+
 export const THEME_LIST = Object.keys(THEME_TOKENS).map((id) => ({ id, label: { paper: "米纸", ink: "印刷", night: "深色", plain: "近白" }[id] || id }));

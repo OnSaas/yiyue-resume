@@ -9,6 +9,7 @@ export const LAYOUT_DEFS = {
   classic: {
     compact: false,
     header: "full",
+    supports: { portrait: true, landscape: true, mobileScale: true, print: true },
     columns: [
       { width: 70, children: ["experience", "projects", "education", "awards", "publications", "custom"] },
       { width: 30, children: ["contact", "skills", "languages", "certifications"] },
@@ -17,6 +18,7 @@ export const LAYOUT_DEFS = {
   compact: {
     compact: true,
     header: "full",
+    supports: { portrait: true, landscape: true, mobileScale: true, print: true },
     columns: [
       { width: 72, children: ["experience", "projects", "education", "custom"] },
       { width: 28, children: ["contact", "skills"] },
@@ -25,6 +27,7 @@ export const LAYOUT_DEFS = {
   "two-column": {
     compact: false,
     header: "full",
+    supports: { portrait: true, landscape: true, mobileScale: true, print: true },
     columns: [
       { width: 50, children: ["experience", "projects"] },
       { width: 50, children: ["skills", "education", "contact", "custom"] },
@@ -33,6 +36,7 @@ export const LAYOUT_DEFS = {
   sidebar: {
     compact: false,
     header: "none",
+    supports: { portrait: true, landscape: true, mobileScale: true, print: true },
     variants: {
       left: [
         { width: 32, children: ["profile", "contact", "skills", "languages"] },
@@ -63,7 +67,7 @@ export function resolveLayout(presentation) {
       ? presentation.layoutVariant
       : "left";
     columns = def.variants[v];
-    return { id, compact: !!def.compact, header: def.header, layoutVariant: v, columns };
+    return { id, compact: !!def.compact, header: def.header, layoutVariant: v, columns, supports: def.supports };
   }
-  return { id, compact: !!def.compact, header: def.header || "full", layoutVariant: "", columns };
+  return { id, compact: !!def.compact, header: def.header || "full", layoutVariant: "", columns, supports: def.supports };
 }
