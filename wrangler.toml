@@ -6,8 +6,10 @@ workers_dev = true
 [assets]
 directory = "public"
 binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"
+not_found_handling = "none"
 
-# KV id filled after wrangler kv namespace create
 [[kv_namespaces]]
 binding = "RESUME_KV"
 id = "904d3d264aa948f4ab88d61c60905e60"

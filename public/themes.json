@@ -1,0 +1,8 @@
+{
+  "themes": [
+    { "id": "paper", "label": "米纸" },
+    { "id": "ink", "label": "印刷" },
+    { "id": "night", "label": "深色" },
+    { "id": "plain", "label": "近白" }
+  ]
+}

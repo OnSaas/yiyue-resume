@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>登录</title>
+  <link rel="stylesheet" href="/css/resume.css" />
+</head>
+<body class="page">
+  <form class="gate" method="post" action="/login">
+    <h1>管理员登录</h1>
+    <p>单管理员。Cookie HttpOnly，7 天。</p>
+    <input type="password" name="password" required autocomplete="current-password" />
+    <button type="submit">进入后台</button>
+    <p class="err" id="err"></p>
+  </form>
+  <script>
+    if (new URLSearchParams(location.search).get("e")) {
+      document.getElementById("err").textContent = "密码错误";
+    }
+  </script>
+</body>
+</html>

@@ -3,32 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>楚扉月 · 简历</title>
-  <meta name="robots" content="noindex" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>私有</title>
   <link rel="stylesheet" href="/css/resume.css" />
-  <style>
-    html, body { margin: 0; background: #e7e0d4; }
-    .miss { max-width: 820px; margin: 48px auto; color: #6b6258; font-family: "PingFang SC", sans-serif; padding: 0 20px; }
-  </style>
 </head>
-<body>
-  <div id="app"></div>
-  <script type="module">
-    import { normalizeMagic } from "/js/magic-json.js";
-    import { renderResume } from "/js/render.js";
-
-    const app = document.getElementById("app");
-    const path = location.pathname;
-    let slug = "default";
-    if (path.startsWith("/r/")) slug = decodeURIComponent(path.slice(3).replace(/\/$/, "")) || "default";
-
-    const res = await fetch("/api/public/" + encodeURIComponent(slug));
-    if (!res.ok) {
-      app.innerHTML = `<p class="miss">没有这份公开简历。后台开公开并设 slug 后访问 <code>/r/slug</code>。</p>`;
-    } else {
-      const data = normalizeMagic(await res.json());
-      renderResume(app, data);
-    }
-  </script>
+<body class="page">
+  <main class="gate">
+    <h1>私有页</h1>
+    <p>这里不展示简历。有效分享链接才会打开某一份。</p>
+    <p><a href="/login">管理员登录</a></p>
+  </main>
 </body>
 </html>

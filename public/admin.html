@@ -3,12 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>简历后台</title>
   <meta name="robots" content="noindex" />
+  <title>简历后台</title>
   <link rel="stylesheet" href="/css/resume.css" />
   <link rel="stylesheet" href="/css/admin.css" />
 </head>
 <body>
+  <div class="app">
+    <aside class="side">
+      <h1>简历</h1>
+      <div class="row">
+        <button class="btn" id="newBtn" type="button">新建</button>
+        <button class="btn ghost" id="importBtn" type="button">导入 JSON</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+      <div id="list" class="list"></div>
+      <p><button class="btn ghost" id="outBtn" type="button">退出</button></p>
+    </aside>
+    <section class="main">
+      <h2>JSON</h2>
+      <p class="muted">一份简历一份 JSON。缺字段会补默认；结构不是对象会拒绝。</p>
+      <div class="field span2">
+        <textarea id="json" spellcheck="false"></textarea>
+      </div>
+      <div class="row">
+        <button class="btn" id="saveBtn" type="button">保存</button>
+        <button class="btn ghost" id="exportBtn" type="button">导出</button>
+        <button class="btn ghost" id="previewBtn" type="button">预览</button>
+        <button class="btn danger" id="delBtn" type="button">删除</button>
+      </div>
+      <p class="err" id="jsonErr"></p>
+
+      <h2>生成分享</h2>
+      <div class="grid">
+        <div class="field">
+          <label>主题</label>
+          <select id="theme"></select>
+        </div>
+        <div class="field">
+          <label>有效期</label>
+          <select id="ttl">
+            <option value="3600">1 小时</option>
+            <option value="86400">24 小时</option>
+            <option value="604800" selected>7 天</option>
+            <option value="2592000">30 天</option>
+            <option value="custom">自定义秒</option>
+            <option value="never">永不过期</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>自定义秒</label>
+          <input id="ttlCustom" type="number" min="60" placeholder="秒" />
+        </div>
+        <div class="field">
+          <label>分享密码（可空）</label>
+          <input id="sharePw" type="password" autocomplete="new-password" />
+        </div>
+        <div class="field span2">
+          <label>备注</label>
+          <input id="label" placeholder="给招聘方 A" />
+        </div>
+      </div>
+      <button class="btn" id="shareBtn" type="button">生成 /s/token</button>
+      <p class="muted" id="shareOut"></p>
+
+      <h2>分享列表</h2>
+      <div id="shares"></div>
+    </section>
+  </div>
+  <div class="status" id="status"></div>
   <script type="module" src="/js/admin.js"></script>
 </body>
 </html>
