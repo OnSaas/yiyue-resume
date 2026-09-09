@@ -1,7 +1,13 @@
 name = "yiyue-resume"
+main = "src/worker.js"
 compatibility_date = "2025-09-01"
 workers_dev = true
 
 [assets]
 directory = "public"
-not_found_handling = "404-page"
+binding = "ASSETS"
+
+# KV id filled after wrangler kv namespace create
+[[kv_namespaces]]
+binding = "RESUME_KV"
+id = "904d3d264aa948f4ab88d61c60905e60"

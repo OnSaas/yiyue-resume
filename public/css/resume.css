@@ -1,0 +1,151 @@
+:root {
+  --paper: #f4efe6;
+  --ink: #1a1612;
+  --muted: #6b6258;
+  --line: #d8d0c4;
+  --accent: #8c2f1b;
+  --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STSong", "Times New Roman", serif;
+  --sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+.sheet {
+  max-width: 820px;
+  margin: 32px auto;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 48px 52px 56px;
+  min-height: calc(100vh - 64px);
+  box-shadow: 0 1px 0 rgba(26,22,18,.06), 0 18px 40px rgba(26,22,18,.08);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.sheet .top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px 24px;
+  align-items: end;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 18px;
+}
+.sheet .top.center { grid-template-columns: 1fr; text-align: center; }
+.sheet .top.right { direction: rtl; }
+.sheet .top.right > * { direction: ltr; }
+
+.sheet .identity { display: flex; gap: 18px; align-items: end; }
+.sheet .photo {
+  object-fit: cover;
+  background: var(--line);
+  flex: none;
+}
+
+.sheet .name {
+  font-family: var(--serif);
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.1;
+  margin: 0;
+}
+.sheet .job-title { margin: 8px 0 0; font-size: 16px; }
+.sheet .tagline { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+.sheet .meta { text-align: right; font-size: 13px; color: var(--muted); }
+.sheet .meta a, .sheet .contact a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
+.sheet .meta a:hover, .sheet .contact a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+.sheet .variant {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sheet .actions { margin-top: 10px; }
+.sheet .actions button, .sheet .actions a.btn {
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.sheet .actions button:hover { background: var(--ink); color: var(--paper); }
+
+.sheet .body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(180px, .7fr);
+  gap: 36px;
+  margin-top: 28px;
+}
+
+.sheet h2 {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin: 0 0 14px;
+  color: var(--accent);
+}
+.sheet section + section { margin-top: 28px; }
+
+.sheet .job { margin: 0 0 20px; }
+.sheet .job-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+.sheet .job-role { font-weight: 650; }
+.sheet .job-org { color: var(--muted); }
+.sheet .job-time { flex: none; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.sheet .job ul, .sheet .prose ul { margin: 6px 0 0; padding-left: 1.1em; }
+.sheet .job li, .sheet .prose li { margin: 3px 0; }
+.sheet .prose { font-size: 14px; }
+.sheet .certs { display: flex; flex-wrap: wrap; gap: 10px; }
+.sheet .certs img { max-width: 100%; height: auto; border: 1px solid var(--line); }
+
+.sheet .rail p, .sheet .rail li { font-size: 13px; }
+.sheet .rail ul { margin: 0; padding-left: 1.1em; }
+.sheet .empty {
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--line);
+  padding: 12px 14px;
+}
+
+.sheet footer.note {
+  margin-top: 36px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .sheet { margin: 0; padding: 28px 20px 40px; min-height: 100vh; box-shadow: none; }
+  .sheet .top, .sheet .body, .sheet .job-head, .sheet .identity { display: block; }
+  .sheet .meta { text-align: left; margin-top: 12px; }
+  .sheet .name { font-size: 34px; }
+  .sheet .photo { margin-bottom: 12px; }
+}
+
+@media print {
+  html, body { background: #fff !important; }
+  .sheet {
+    margin: 0; padding: 0; box-shadow: none; min-height: 0;
+    background: #fff; max-width: none;
+  }
+  .sheet .actions, .sheet footer.note { display: none; }
+  .sheet a { border-bottom: none !important; }
+  @page { margin: 14mm 16mm; }
+}
