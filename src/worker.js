@@ -486,6 +486,15 @@ export default {
       return asset(env, req, "/admin.html");
     }
 
+    const editPage = path.match(/^\/admin\/e\/([^/]+)$/);
+    if (editPage && method === "GET") {
+      const ok = await readAdmin(req, env);
+      if (!ok) {
+        return new Response(null, { status: 302, headers: { Location: "/login" } });
+      }
+      return asset(env, req, "/edit.html");
+    }
+
     const preview = path.match(/^\/admin\/preview\/([^/]+)$/);
     if (preview && method === "GET") {
       const denied = await requireAdmin(req, env);
@@ -494,8 +503,7 @@ export default {
       const raw = await env.RESUME_KV.get("resume:" + id);
       if (!raw) return html(failPage("没有这份简历", ""), 404);
       const resume = normalizeResume(JSON.parse(raw), id);
-      let theme = url.searchParams.get("theme") || resume.theme;
-      if (!THEMES.includes(theme)) theme = "paper";
+      const theme = THEMES.includes(resume.theme) ? resume.theme : "paper";
       return html(resumePage(resume, theme, { note: "后台预览，不会出现在公开默认页。" }));
     }
 

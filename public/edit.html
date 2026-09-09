@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>编辑简历</title>
+  <link rel="stylesheet" href="/css/resume.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="btn ghost" type="button" id="backBtn">返回</button>
+    <div class="topbar-title" id="editTitle">编辑</div>
+    <div class="row top-actions">
+      <button class="btn" type="button" id="saveBtn">保存</button>
+      <button class="btn ghost" type="button" id="exportBtn">导出 JSON</button>
+      <button class="btn ghost" type="button" id="fullBtn">全屏预览</button>
+      <button class="btn danger" type="button" id="delBtn">删除</button>
+    </div>
+  </header>
+  <p class="err bar-err" id="bindErr"></p>
+  <div class="edit-layout">
+    <form class="main form-col" id="form" autocomplete="off">
+      <section class="block">
+        <h2>基本</h2>
+        <div class="grid">
+          <div class="field"><label>姓名</label><input name="name" /></div>
+          <div class="field"><label>英文名</label><input name="nameEn" /></div>
+          <div class="field"><label>岗位/版本</label><input name="variant" /></div>
+          <div class="field">
+            <label>主题</label>
+            <select name="theme">
+              <option value="paper">米纸</option>
+              <option value="ink">印刷</option>
+              <option value="night">深色</option>
+              <option value="plain">近白</option>
+            </select>
+          </div>
+          <div class="field span2"><label>一句话</label><input name="tagline" /></div>
+        </div>
+      </section>
+      <section class="block">
+        <h2>链接</h2>
+        <div id="links"></div>
+        <button class="btn ghost" type="button" data-add="links">加一条</button>
+      </section>
+      <section class="block">
+        <h2>联系</h2>
+        <div id="contact"></div>
+        <button class="btn ghost" type="button" data-add="contact">加一条</button>
+      </section>
+      <section class="block">
+        <h2>技能</h2>
+        <div id="skills"></div>
+        <button class="btn ghost" type="button" data-add="skills">加一条</button>
+      </section>
+      <section class="block">
+        <h2>经历</h2>
+        <div id="experience"></div>
+        <button class="btn ghost" type="button" data-add="experience">加一条</button>
+      </section>
+      <section class="block">
+        <h2>项目</h2>
+        <div id="projects"></div>
+        <button class="btn ghost" type="button" data-add="projects">加一条</button>
+      </section>
+      <details class="block">
+        <summary>高级 · JSON</summary>
+        <p class="muted">只读当前对象。粘贴覆盖后点「应用 JSON」。</p>
+        <textarea id="json" spellcheck="false"></textarea>
+        <div class="row">
+          <button class="btn ghost" type="button" id="applyJson">应用 JSON</button>
+        </div>
+      </details>
+      <p class="err" id="formErr"></p>
+    </form>
+    <aside class="preview-col">
+      <div class="live" id="live"></div>
+    </aside>
+  </div>
+  <div class="status" id="status"></div>
+  <script type="module" src="/js/edit.js"></script>
+</body>
+</html>
