@@ -503,7 +503,8 @@ export default {
       const raw = await env.RESUME_KV.get("resume:" + id);
       if (!raw) return html(failPage("没有这份简历", ""), 404);
       const resume = normalizeResume(JSON.parse(raw), id);
-      const theme = THEMES.includes(resume.theme) ? resume.theme : "paper";
+      const q = url.searchParams.get("theme");
+      const theme = THEMES.includes(q) ? q : (THEMES.includes(resume.theme) ? resume.theme : "paper");
       return html(resumePage(resume, theme, { note: "后台预览，不会出现在公开默认页。" }));
     }
 

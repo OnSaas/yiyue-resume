@@ -78,6 +78,21 @@ function scaleThumbs() {
   });
 }
 
+function updateSharePreview() {
+  const iframe = $("sharePreview");
+  if (!iframe) return;
+  const id = $("resumeId").value;
+  if (!id) {
+    iframe.removeAttribute("src");
+    return;
+  }
+  const theme = $("theme").value;
+  let src = "/admin/preview/" + encodeURIComponent(id);
+  if (theme) src += "?theme=" + encodeURIComponent(theme);
+  if (iframe.getAttribute("src") !== src) iframe.setAttribute("src", src);
+  requestAnimationFrame(scaleThumbs);
+}
+
 function drawCards() {
   $("count").textContent = list.length + " 份";
   const box = $("cards");
@@ -136,6 +151,7 @@ function drawCards() {
   box.append(neu);
   requestAnimationFrame(scaleThumbs);
   fillResumeSelect();
+  updateSharePreview();
 }
 
 function fillResumeSelect() {
@@ -206,6 +222,7 @@ function setShareMode(mode, share) {
     $("clearPw").value = "no";
     fillExpiry(share);
   }
+  updateSharePreview();
 }
 
 function openShareFor(resumeId) {
@@ -332,6 +349,7 @@ function setBench(name) {
   $("benchShares").classList.toggle("hidden", name !== "shares");
   $("tabResumes").classList.toggle("on", name === "resumes");
   $("tabShares").classList.toggle("on", name === "shares");
+  if (name === "shares") requestAnimationFrame(() => { updateSharePreview(); scaleThumbs(); });
 }
 
 async function boot() {
@@ -341,6 +359,8 @@ async function boot() {
   must("tabResumes");
   $("tabResumes").onclick = () => setBench("resumes");
   $("tabShares").onclick = () => setBench("shares");
+  $("resumeId").addEventListener("change", updateSharePreview);
+  $("theme").addEventListener("change", updateSharePreview);
   $("modeCreate").onclick = () => setShareMode("create");
   $("modeEdit").onclick = () => setShareMode("edit");
   $("newBtn").onclick = createResume;

@@ -1,7 +1,9 @@
 const THEMES = ["paper", "ink", "night", "plain"];
 
+let doc = document;
+
 function el(tag, attrs = {}, children = []) {
-  const node = document.createElement(tag);
+  const node = doc.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (k === "class") node.className = v;
     else if (k === "text") node.textContent = v;
@@ -36,11 +38,12 @@ function jobs(list, emptyMsg) {
 }
 
 export function renderSheet(mount, resume) {
+  doc = mount.ownerDocument;
   const theme = THEMES.includes(resume.theme) ? resume.theme : "paper";
-  document.documentElement.setAttribute("data-theme", theme);
+  doc.documentElement.setAttribute("data-theme", theme);
   const name = resume.name || "";
   const variant = resume.variant || "";
-  document.title = name + (variant ? " · " + variant : "");
+  doc.title = name + (variant ? " · " + variant : "");
 
   const links = el("div");
   for (const l of resume.links || []) {

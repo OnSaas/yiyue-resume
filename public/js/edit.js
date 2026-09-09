@@ -175,6 +175,24 @@ function sync() {
   $("json").value = JSON.stringify(data, null, 2);
   $("editTitle").textContent = data.variant || data.name || data.id;
   renderSheet($("live"), data);
+  layoutA4();
+}
+
+function layoutA4() {
+  const a4 = $("a4");
+  const sizer = $("a4sizer");
+  const inner = $("live");
+  if (!a4 || !sizer || !inner) return;
+  const boxW = a4.clientWidth || Math.min(420, a4.parentElement?.clientWidth || 420);
+  const scale = boxW / 820;
+  a4.style.height = boxW * 297 / 210 + "px";
+  inner.style.width = "820px";
+  inner.style.transform = "scale(" + scale + ")";
+  inner.style.transformOrigin = "top left";
+  const sheet = inner.querySelector(".sheet");
+  const sh = sheet ? Math.max(sheet.scrollHeight, sheet.offsetHeight, 1100) : 1100;
+  sizer.style.width = boxW + "px";
+  sizer.style.height = sh * scale + "px";
 }
 
 async function boot() {
@@ -205,7 +223,21 @@ async function boot() {
     a.click();
     toast("已导出");
   };
-  $("fullBtn").onclick = () => window.open("/admin/preview/" + encodeURIComponent(id), "_blank");
+  $("fullBtn").onclick = () => {
+    sync();
+    const w = window.open("about:blank", "_blank");
+    if (!w) {
+      window.open("/admin/preview/" + encodeURIComponent(id), "_blank");
+      return;
+    }
+    w.document.open();
+    w.document.write("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"stylesheet\" href=\"/css/resume.css\"></head><body class=\"page\"></body></html>");
+    w.document.close();
+    const mount = w.document.createElement("div");
+    w.document.body.append(mount);
+    renderSheet(mount, data);
+  };
+  window.addEventListener("resize", layoutA4);
   $("delBtn").onclick = async () => {
     if (!confirm("删除 " + id + "？分享不会一起删。")) return;
     try {
