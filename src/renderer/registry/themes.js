@@ -73,4 +73,24 @@ export function themeTokens(id) {
   };
 }
 
-export const THEME_LIST = Object.keys(THEME_TOKENS).map((id) => ({ id, label: { paper: "米纸", ink: "印刷", night: "深色", plain: "近白" }[id] || id }));
+export const THEME_LIST = Object.keys(THEME_TOKENS).map((id) => ({
+  id,
+  name: { paper: "米纸", ink: "印刷", night: "深色", plain: "近白" }[id] || id,
+  label: { paper: "米纸", ink: "印刷", night: "深色", plain: "近白" }[id] || id,
+  description: { paper: "现有米纸", ink: "高对比印刷", night: "深色", plain: "近白、适合打印" }[id] || id,
+  version: 1,
+  supports: { print: true },
+  preview: null,
+}));
+
+export function themeMetadata() {
+  return THEME_LIST.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    version: t.version,
+    supports: t.supports,
+    preview: t.preview,
+    tokens: themeTokens(t.id),
+  }));
+}

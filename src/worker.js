@@ -7,6 +7,10 @@ import { toMofang } from "./adapters/mofang.js";
 import { hashPassword, verifyPassword } from "./share/security.js";
 import { importPayload } from "./services/import.js";
 import { mergeCanonical } from "./domain/patch.js";
+import { layoutMetadata } from "./renderer/registry/layouts.js";
+import { themeMetadata } from "./renderer/registry/themes.js";
+import { PAGE_SIZES } from "./config/pageSizes.js";
+import { FEATURE_FLAGS } from "./config/featureFlags.js";
 
 const enc = new TextEncoder();
 
@@ -15,6 +19,9 @@ function json(data, status = 200, headers = {}) {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers },
   });
+}
+function jsonErr(code, message, status = 400, extra = {}) {
+  return json({ error: { code, message }, ...extra }, status);
 }
 function html(body, status = 200, headers = {}) {
   return new Response(body, {
@@ -99,8 +106,8 @@ function unlockPage(token, err) {
   return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>解锁简历</title><link rel="stylesheet" href="/css/resume.css"/></head><body class="page"><form class="gate" method="post" action="/s/${token}/unlock"><h1>这份简历有访问密码</h1><input type="password" name="password" required autocomplete="current-password"/><button type="submit">查看</button>${err ? `<p class="err">${err}</p>` : ""}</form></body></html>`;
 }
 async function requireAdmin(req, env) {
-  if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return json({ error: "未配置 ADMIN_PASSWORD 或 SESSION_SECRET" }, 503);
-  if (!(await readAdmin(req, env))) return json({ error: "未登录" }, 401);
+  if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return jsonErr("CONFIG_MISSING", "未配置 ADMIN_PASSWORD 或 SESSION_SECRET", 503);
+  if (!(await readAdmin(req, env))) return jsonErr("UNAUTHENTICATED", "未登录", 401);
   return null;
 }
 async function asset(env, req, path) {
@@ -225,17 +232,39 @@ export default {
       if (denied) return denied;
 
       if (path === "/api/meta" && method === "GET") {
-        return json({ layouts: LAYOUTS, themes: THEMES, orientations: ORIENTATIONS, adapters: listAdapters() });
+        return json({
+          layouts: layoutMetadata(),
+          themes: themeMetadata(),
+          orientations: ORIENTATIONS,
+          adapters: listAdapters(),
+          canvas: PAGE_SIZES,
+          flags: FEATURE_FLAGS,
+        });
       }
 
       if (path === "/api/import" && method === "POST") {
         let body;
-        try { body = await req.json(); } catch { return json({ error: "坏 JSON", code: "IMPORT_INVALID_FORMAT" }, 400); }
+        try { body = await req.json(); } catch { return jsonErr("IMPORT_INVALID_FORMAT", "坏 JSON"); }
         const got = importPayload(body.payload ?? body.json ?? body);
         if (!got.ok) {
-          return json({ ok: false, error: got.errors.join("；"), code: "IMPORT_INVALID_FORMAT", errors: got.errors, format: got.format, warnings: got.warnings, stats: got.stats }, 400);
+          return json({
+            ok: false,
+            error: { code: "IMPORT_INVALID_FORMAT", message: got.errors.join("；") },
+            errors: got.errors,
+            format: got.format,
+            warnings: got.warnings,
+            stats: got.stats,
+          }, 400);
         }
-        return json({ ok: true, format: got.format, canonical: got.canonical, warnings: got.warnings, stats: got.stats });
+        return json({
+          ok: true,
+          format: got.format,
+          version: got.version,
+          canonical: got.canonical,
+          warnings: got.warnings,
+          stats: got.stats,
+          preservedFields: got.preservedFields || [],
+        });
       }
 
       if (path === "/api/preview" && method === "POST") {

@@ -42,7 +42,10 @@ async function api(path, opts = {}) {
     location.href = "/login";
     throw new Error("未登录");
   }
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (!res.ok) {
+    const e = data?.error;
+    throw new Error((e && typeof e === "object" ? e.message : e) || res.statusText);
+  }
   return data;
 }
 

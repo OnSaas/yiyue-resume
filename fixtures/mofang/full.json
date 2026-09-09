@@ -1,0 +1,35 @@
+{
+  "title": "完整",
+  "templateId": "classic",
+  "basic": {
+    "name": "宋哈娜",
+    "title": "高级前端工程师",
+    "email": "a@b.com",
+    "phone": "13800138000",
+    "location": "北京",
+    "birthDate": "1994-01-01",
+    "employementStatus": "在职",
+    "photo": "https://example.com/a.png",
+    "photoConfig": { "width": 90, "height": 120, "aspectRatio": "3:4", "borderRadius": "none", "customBorderRadius": 0 },
+    "customFields": [{ "label": "站点", "value": "https://hana.dev", "visible": true }],
+    "fieldOrder": [{ "id": "1", "key": "name", "label": "姓名", "visible": true }],
+    "icons": { "email": "mail" },
+    "githubUseName": "hana",
+    "githubContributionsVisible": false
+  },
+  "experience": [
+    { "company": "Acme", "position": "工程师", "date": "2020-2024", "details": "<ul><li>做了 A</li><li>做了 B</li></ul>", "visible": true }
+  ],
+  "education": [
+    { "school": "北大", "major": "CS", "degree": "学士", "startDate": "2013", "endDate": "2017", "description": "<p>奖学金</p>" }
+  ],
+  "projects": [
+    { "name": "X", "role": "负责人", "date": "2021", "description": "<li>上线</li>", "link": "https://x.dev" }
+  ],
+  "skillContent": "<ul><li>React</li><li>Workers</li></ul>",
+  "selfEvaluationContent": "<p>认真</p>",
+  "certificates": [{ "id": "1", "name": "AWS", "url": "" }],
+  "menuSections": [],
+  "globalSettings": { "themeColor": "#111" },
+  "customData": {}
+}

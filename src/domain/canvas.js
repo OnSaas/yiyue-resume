@@ -1,22 +1,11 @@
-const PRESETS = {
-  a4: { id: "a4", widthPortrait: 210, heightPortrait: 297 },
-};
+import { pageBox, DEFAULT_PAGE_SIZE } from "../config/pageSizes.js";
 
 export function resolveCanvas(presentation = {}, options = {}) {
-  const preset = PRESETS[options.preset || "a4"] || PRESETS.a4;
-  const orientation = presentation.orientation === "landscape" ? "landscape" : "portrait";
-  const widthMm = orientation === "landscape" ? preset.heightPortrait : preset.widthPortrait;
-  const heightMm = orientation === "landscape" ? preset.widthPortrait : preset.heightPortrait;
+  const pageSize = options.pageSize || presentation.pageSize || DEFAULT_PAGE_SIZE;
+  const box = pageBox(pageSize, presentation.orientation);
   return {
-    id: preset.id,
-    orientation,
-    widthMm,
-    heightMm,
-    pageSize: orientation === "landscape" ? "A4 landscape" : "A4 portrait",
-    aspect: `${widthMm} / ${heightMm}`,
-    designWidth: 820,
+    ...box,
     strategy: "scale",
+    margins: presentation.margins || null,
   };
 }
-
-export { PRESETS as CANVAS_PRESETS };

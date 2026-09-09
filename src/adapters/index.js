@@ -1,6 +1,6 @@
 import { emptyCanonical, sanitizeCanonical, validateCanonical } from "../schema/resume.js";
 import { migrateResume } from "../schema/migrations/index.js";
-import { fromMofang, toMofang, isMofang } from "./mofang.js";
+import { fromMofang, toMofang, isMofang, detectMofangVersion, preservedFields, ADAPTER_VERSION } from "./mofang.js";
 import { fromNative, isNative } from "./native.js";
 import { registerAdapter, detectAdapter, getAdapter, listAdapters } from "./registry.js";
 
@@ -17,6 +17,7 @@ registerAdapter({
 registerAdapter({
   id: "mofang",
   label: "魔方简历",
+  version: ADAPTER_VERSION,
   detect: isMofang,
   import: fromMofang,
   export: toMofang,
@@ -88,7 +89,9 @@ export function ingest(raw) {
     const errors = validateCanonical(resume);
     if (errors.length) return { ok: false, errors, format, resume, canonical: resume, warnings: [], stats: statsOf(resume) };
     const warnings = warningsOf(format, resume);
-    return { ok: true, errors: [], format, resume, canonical: resume, warnings, stats: statsOf(resume) };
+    const version = format === "mofang" ? detectMofangVersion(raw) : "1";
+    const preserved = format === "mofang" ? preservedFields(resume.extras) : [];
+    return { ok: true, errors: [], format, version, resume, canonical: resume, warnings, stats: statsOf(resume), preservedFields: preserved };
   } catch (e) {
     return { ok: false, errors: [e.message || "解析失败"], format, resume: emptyCanonical(), canonical: emptyCanonical(), warnings: [], stats: statsOf(emptyCanonical()) };
   }

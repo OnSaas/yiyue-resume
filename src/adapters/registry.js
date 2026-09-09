@@ -8,7 +8,7 @@ export function registerAdapter(adapter) {
 }
 
 export function listAdapters() {
-  return adapters.map((a) => ({ id: a.id, label: a.label || a.id }));
+  return adapters.map((a) => ({ id: a.id, label: a.label || a.id, version: a.version || "1" }));
 }
 
 export function detectAdapter(raw) {

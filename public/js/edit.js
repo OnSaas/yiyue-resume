@@ -8,6 +8,12 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove("on"), 1600);
 }
 
+function errText(data, fallback) {
+  const e = data?.error;
+  if (e && typeof e === "object") return e.message || fallback;
+  return e || fallback;
+}
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     credentials: "same-origin",
@@ -19,7 +25,7 @@ async function api(path, opts = {}) {
     location.href = "/login";
     throw new Error("未登录");
   }
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (!res.ok) throw new Error(errText(data, res.statusText));
   return data;
 }
 
@@ -28,6 +34,24 @@ if (!id) location.href = "/admin";
 
 let data = { resume: null, presentation: { layout: "classic", theme: "paper" } };
 let pendingImport = null;
+let canvasBox = { designWidth: 820, portrait: [210, 297], landscape: [297, 210] };
+let hist = [];
+let histI = -1;
+let applyingHist = false;
+let savedSnap = "";
+
+function snap() {
+  return JSON.stringify({ resume: data.resume, presentation: data.presentation });
+}
+function pushHist() {
+  if (applyingHist) return;
+  const s = snap();
+  if (s === hist[histI]) return;
+  hist = hist.slice(0, histI + 1);
+  hist.push(s);
+  if (hist.length > 40) hist.shift();
+  histI = hist.length - 1;
+}
 
 function rowLink(item = {}) {
   const wrap = document.createElement("div");
@@ -63,6 +87,7 @@ function delBtn(wrap) {
   b.addEventListener("click", () => {
     wrap.remove();
     sync();
+    pushHist();
   });
   return b;
 }
@@ -238,10 +263,13 @@ function layoutA4() {
   const sizer = $("a4sizer");
   const inner = $("live");
   if (!a4 || !sizer || !inner) return;
+  const land = data.presentation?.orientation === "landscape";
+  const [aw, ah] = land ? (canvasBox.landscape || [297, 210]) : (canvasBox.portrait || [210, 297]);
+  const design = canvasBox.designWidth || 820;
   const boxW = a4.clientWidth || Math.min(420, a4.parentElement?.clientWidth || 420);
-  const scale = boxW / 820;
-  a4.style.height = boxW * 297 / 210 + "px";
-  inner.style.width = "820px";
+  const scale = boxW / design;
+  a4.style.height = boxW * ah / aw + "px";
+  inner.style.width = design + "px";
   inner.style.transform = "scale(" + scale + ")";
   inner.style.transformOrigin = "top left";
   const sheet = inner.querySelector(".sheet");
@@ -257,19 +285,26 @@ async function previewImport(raw) {
   const fmt = got.format === "mofang" ? "魔方简历 JSON" : got.format === "yiyue-project" ? "项目 JSON" : got.format;
   const s = got.stats || {};
   $("importHint").textContent = `已识别为${fmt} · 经历 ${s.experience || 0} · 项目 ${s.projects || 0}` +
-    (got.warnings?.length ? ` · ${got.warnings.length} 条提示` : "");
+    (got.warnings?.length ? ` · ${got.warnings.length} 条提示` : "") +
+    (got.preservedFields?.length ? ` · 保留 ${got.preservedFields.length} 个未映射字段` : "");
   if ($("importConfirmBtn")) $("importConfirmBtn").hidden = false;
   toast("预览导入结果，确认后才替换");
 }
 
 async function boot() {
   if (!$("saveBtn") || !$("form")) throw new Error("编辑页节点缺失");
+  try {
+    const meta = await api("/api/meta");
+    if (meta.canvas?.a4) canvasBox = meta.canvas.a4;
+  } catch { /* 用默认纸张 */ }
   data = await api("/api/resumes/" + encodeURIComponent(id));
   writeForm(data);
   fillRepeats();
   sync();
+  pushHist();
+  savedSnap = snap();
 
-  $("form").addEventListener("input", sync);
+  $("form").addEventListener("input", () => { sync(); pushHist(); });
   $("form").addEventListener("change", () => {
     const wrap = $("variantWrap");
     if (wrap && fieldVal("layout")) wrap.hidden = fieldVal("layout").value !== "sidebar";
@@ -334,6 +369,7 @@ async function boot() {
       writeForm(data);
       fillRepeats();
       toast("已保存");
+      savedSnap = snap();
     } catch (e) {
       $("formErr").textContent = e.message;
     }
@@ -384,6 +420,7 @@ async function boot() {
       writeForm(data);
       fillRepeats();
       sync();
+      pushHist();
       toast("已应用到表单，记得保存");
     } catch (e) {
       $("formErr").textContent = e.message;
@@ -396,7 +433,29 @@ async function boot() {
       else if (k === "skills") $(k).append(rowSkill());
       else $(k).append(rowJob());
       sync();
+      pushHist();
     });
+  });
+  window.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+    e.preventDefault();
+    const next = e.shiftKey ? histI + 1 : histI - 1;
+    if (next < 0 || next >= hist.length) return;
+    histI = next;
+    applyingHist = true;
+    const o = JSON.parse(hist[histI]);
+    data.resume = o.resume;
+    data.presentation = o.presentation;
+    writeForm(data);
+    fillRepeats();
+    sync();
+    applyingHist = false;
+  });
+  window.addEventListener("beforeunload", (e) => {
+    if (snap() !== savedSnap) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
   });
 }
 

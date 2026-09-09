@@ -64,20 +64,23 @@ export function renderResume(resume, presentationInput, context = {}) {
     <div class="body cols">${cols}</div>
     ${note}
   </article>`;
-  const canvasHtml = `<div class="stage"><div class="canvas" data-orientation="${ori}" data-canvas="${esc(canvas.id)}" style="aspect-ratio:${canvas.aspect}">${sheet}</div></div>
+  const canvasHtml = `<div class="stage"><div class="canvas" data-orientation="${ori}" data-canvas="${esc(canvas.id)}" data-aw="${canvas.widthMm}" data-ah="${canvas.heightMm}" data-design="${canvas.designWidth}" data-lmax="${canvas.landscapeMaxPx || 1100}" style="aspect-ratio:${canvas.aspect}">${sheet}</div></div>
 <script>
 (function(){
   var c=document.querySelector(".canvas"); if(!c) return;
   var s=c.querySelector(".sheet"); if(!s) return;
   function fit(){
+    var aw=Number(c.getAttribute("data-aw"))||210;
+    var ah=Number(c.getAttribute("data-ah"))||297;
+    var design=Number(c.getAttribute("data-design"))||820;
+    var lmax=Number(c.getAttribute("data-lmax"))||1100;
     var ori=c.getAttribute("data-orientation");
-    var aw=ori==="landscape"?297:210, ah=ori==="landscape"?210:297;
-    var max=Math.min((c.parentElement&&c.parentElement.clientWidth||window.innerWidth)-24, ori==="landscape"?1100:820);
+    var max=Math.min((c.parentElement&&c.parentElement.clientWidth||window.innerWidth)-24, ori==="landscape"?lmax:design);
     if(max<160) max=160;
     c.style.width=max+"px";
     c.style.height=(max*ah/aw)+"px";
-    var scale=max/820;
-    s.style.width="820px";
+    var scale=max/design;
+    s.style.width=design+"px";
     s.style.transformOrigin="top left";
     s.style.transform="scale("+scale+")";
   }
@@ -96,7 +99,7 @@ export function renderResume(resume, presentationInput, context = {}) {
   <meta name="robots" content="noindex" />
   <title>${esc(title)}</title>
   <link rel="stylesheet" href="/css/resume.css" />
-  <style>@page { size: ${canvas.pageSize}; margin: 12mm; }</style>
+  <style>@page { size: ${canvas.pageSizeCss || canvas.pageSize}; margin: 12mm; }</style>
 </head>
 <body class="page" style="${vars}">
   ${canvasHtml}

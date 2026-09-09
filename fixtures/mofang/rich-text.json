@@ -1,0 +1,11 @@
+{
+  "title": "富文本",
+  "basic": { "name": "宋哈娜", "title": "前端" },
+  "experience": [
+    { "company": "Acme", "position": "工程师", "date": "2020", "details": "<ul><li>第一点</li><li><strong>加粗</strong></li></ul>", "visible": true }
+  ],
+  "projects": [],
+  "education": [],
+  "skillContent": "<ol><li>TypeScript</li><li>Hono</li></ol>",
+  "selfEvaluationContent": "<p>一段<b>评价</b></p>"
+}

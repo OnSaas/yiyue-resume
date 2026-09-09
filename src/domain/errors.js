@@ -40,10 +40,16 @@ export class StorageError extends AppError {
   }
 }
 
-/** 兼容旧前端：error 仍是字符串，另带 code */
+/** 前后端合同：error 为 { code, message }；message 字符串留给旧客户端 */
 export function errorBody(err) {
   if (err instanceof AppError) {
-    return { error: err.message, code: err.code, errors: err.errors };
+    return { error: { code: err.code, message: err.message }, errors: err.errors };
   }
-  return { error: err?.message || "内部错误", code: "INTERNAL" };
+  return { error: { code: "INTERNAL", message: err?.message || "内部错误" } };
+}
+
+export function errorMessage(payload) {
+  const e = payload?.error;
+  if (e && typeof e === "object") return e.message || "";
+  return e || "";
 }
