@@ -109,6 +109,17 @@ body.page {
   gap: 36px;
   margin-top: 28px;
 }
+.body.cols {
+  display: flex;
+  grid-template-columns: unset;
+  gap: 28px;
+  align-items: flex-start;
+}
+.body.cols .col { min-width: 0; }
+.layout-compact { letter-spacing: 0; }
+.layout-compact .job { margin: 0 0 10px; }
+.layout-compact h2 { margin-bottom: 8px; }
+.sec, .job { break-inside: avoid; page-break-inside: avoid; }
 h2 {
   font-family: var(--serif);
   font-size: 13px;

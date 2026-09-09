@@ -87,8 +87,12 @@ function updateSharePreview() {
     return;
   }
   const theme = $("theme").value;
+  const layout = $("layout")?.value || "";
   let src = "/admin/preview/" + encodeURIComponent(id);
-  if (theme) src += "?theme=" + encodeURIComponent(theme);
+  const q = [];
+  if (theme) q.push("theme=" + encodeURIComponent(theme));
+  if (layout) q.push("layout=" + encodeURIComponent(layout));
+  if (q.length) src += "?" + q.join("&");
   if (iframe.getAttribute("src") !== src) iframe.setAttribute("src", src);
   requestAnimationFrame(scaleThumbs);
 }
@@ -216,7 +220,8 @@ function setShareMode(mode, share) {
     editToken = share.token;
     $("editToken").textContent = location.origin + share.url;
     $("resumeId").value = share.resumeId;
-    $("theme").value = share.theme || "";
+    $("theme").value = share.theme || share.presentation?.theme || "";
+    if ($("layout") && (share.layout || share.presentation?.layout)) $("layout").value = share.layout || share.presentation.layout;
     $("label").value = share.label || "";
     $("sharePw").value = "";
     $("clearPw").value = "no";
@@ -361,6 +366,7 @@ async function boot() {
   $("tabShares").onclick = () => setBench("shares");
   $("resumeId").addEventListener("change", updateSharePreview);
   $("theme").addEventListener("change", updateSharePreview);
+  $("layout").addEventListener("change", updateSharePreview);
   $("modeCreate").onclick = () => setShareMode("create");
   $("modeEdit").onclick = () => setShareMode("edit");
   $("newBtn").onclick = createResume;
@@ -385,7 +391,7 @@ async function boot() {
       if (!list.length) throw new Error("先新建并保存一份简历");
       const resumeId = $("resumeId").value;
       if (!resumeId) throw new Error("选一份简历");
-      const body = { resumeId, theme: $("theme").value, label: $("label").value, ...expiryBody() };
+      const body = { resumeId, theme: $("theme").value, layout: $("layout").value, label: $("label").value, ...expiryBody() };
       if (shareMode === "create") {
         if ($("sharePw").value) body.password = $("sharePw").value;
         const s = await api("/api/shares", { method: "POST", body: JSON.stringify(body) });

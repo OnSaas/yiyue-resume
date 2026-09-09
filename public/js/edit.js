@@ -1,5 +1,3 @@
-import { renderSheet } from "./sheet.js";
-
 const $ = (id) => document.getElementById(id);
 
 function toast(msg) {
@@ -28,7 +26,7 @@ async function api(path, opts = {}) {
 const id = decodeURIComponent(location.pathname.replace(/^\/admin\/e\//, "").replace(/\/$/, ""));
 if (!id) location.href = "/admin";
 
-let data = null;
+let data = { resume: null, presentation: { layout: "classic", theme: "paper" } };
 
 function rowLink(item = {}) {
   const wrap = document.createElement("div");
@@ -103,21 +101,23 @@ function rowJob(item = {}) {
 }
 
 function fillRepeats() {
+  const r = data.resume || {};
   const links = $("links");
   links.replaceChildren();
-  (data.links || []).forEach((x) => links.append(rowLink(x)));
+  (r.links || []).forEach((x) => links.append(rowLink(x)));
   const contact = $("contact");
   contact.replaceChildren();
-  (data.contact || []).forEach((x) => contact.append(rowLink(x)));
   const skills = $("skills");
   skills.replaceChildren();
-  (data.skills || []).forEach((x) => skills.append(rowSkill(x)));
+  (r.skills || []).forEach((x) => skills.append(rowSkill(x)));
   const exp = $("experience");
   exp.replaceChildren();
-  (data.experience || []).forEach((x) => exp.append(rowJob(x)));
+  (r.experience || []).forEach((x) => exp.append(rowJob(x)));
   const pro = $("projects");
   pro.replaceChildren();
-  (data.projects || []).forEach((x) => pro.append(rowJob(x)));
+  (r.projects || []).forEach((x) =>
+    pro.append(rowJob({ role: x.name, org: x.role, time: x.time, points: x.points }))
+  );
 }
 
 function collectList(root, kind) {
@@ -146,36 +146,78 @@ function fieldVal(name) {
 
 function readForm() {
   return {
-    id: data.id,
-    name: fieldVal("name").value,
-    nameEn: fieldVal("nameEn").value,
-    variant: fieldVal("variant").value,
-    tagline: fieldVal("tagline").value,
-    theme: fieldVal("theme").value,
-    links: collectList($("links"), "links"),
-    contact: collectList($("contact"), "contact"),
-    skills: collectList($("skills"), "skills"),
-    experience: collectList($("experience"), "job"),
-    projects: collectList($("projects"), "job"),
+    resume: {
+      basics: {
+        name: fieldVal("name").value,
+        nameEn: fieldVal("nameEn").value,
+        headline: fieldVal("variant").value,
+        summary: fieldVal("tagline").value,
+        avatar: data.resume?.basics?.avatar || "",
+        email: data.resume?.basics?.email || "",
+        phone: data.resume?.basics?.phone || "",
+        location: data.resume?.basics?.location || "",
+      },
+      links: collectList($("links"), "links"),
+      contact: [],
+      experience: collectList($("experience"), "job"),
+      education: data.resume?.education || [],
+      projects: collectList($("projects"), "job").map((p) => ({
+        name: p.role,
+        role: p.org,
+        time: p.time,
+        url: "",
+        points: p.points,
+      })),
+      skills: collectList($("skills"), "skills"),
+      languages: data.resume?.languages || [],
+      certifications: data.resume?.certifications || [],
+      awards: data.resume?.awards || [],
+      publications: data.resume?.publications || [],
+      customSections: data.resume?.customSections || [],
+    },
+    presentation: {
+      layout: fieldVal("layout")?.value || "classic",
+      layoutVariant: "",
+      theme: fieldVal("theme").value || "paper",
+      themeOverrides: data.presentation?.themeOverrides || {},
+    },
   };
 }
 
 function writeForm(doc) {
-  fieldVal("name").value = doc.name || "";
-  fieldVal("nameEn").value = doc.nameEn || "";
-  fieldVal("variant").value = doc.variant || "";
-  fieldVal("tagline").value = doc.tagline || "";
-  fieldVal("theme").value = doc.theme || "paper";
-  $("editTitle").textContent = doc.variant || doc.name || doc.id;
-  $("json").value = JSON.stringify(doc, null, 2);
+  const r = doc.resume || doc;
+  const b = r.basics || {};
+  fieldVal("name").value = b.name || "";
+  fieldVal("nameEn").value = b.nameEn || "";
+  fieldVal("variant").value = b.headline || "";
+  fieldVal("tagline").value = b.summary || "";
+  fieldVal("theme").value = doc.presentation?.theme || "paper";
+  if (fieldVal("layout")) fieldVal("layout").value = doc.presentation?.layout || "classic";
+  $("editTitle").textContent = b.headline || b.name || doc.id;
+  $("json").value = JSON.stringify(r, null, 2);
 }
 
 function sync() {
-  data = { ...data, ...readForm() };
-  $("json").value = JSON.stringify(data, null, 2);
-  $("editTitle").textContent = data.variant || data.name || data.id;
-  renderSheet($("live"), data);
+  data = { id: data.id, ...readForm() };
+  $("json").value = JSON.stringify(data.resume, null, 2);
+  $("editTitle").textContent = data.resume.basics.headline || data.resume.basics.name || data.id;
+  preview();
   layoutA4();
+}
+
+let previewTimer = 0;
+async function preview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    try {
+      const out = await api("/api/preview", { method: "POST", body: JSON.stringify(data) });
+      const live = $("live");
+      live.innerHTML = out.html || "";
+      layoutA4();
+    } catch {
+      /* keep last */
+    }
+  }, 200);
 }
 
 function layoutA4() {
@@ -208,8 +250,10 @@ async function boot() {
     $("formErr").textContent = "";
     try {
       sync();
-      data = await api("/api/resumes/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify(data) });
+      const saved = await api("/api/resumes/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify(data) });
+      data = saved;
       writeForm(data);
+      fillRepeats();
       toast("已保存");
     } catch (e) {
       $("formErr").textContent = e.message;
@@ -218,24 +262,26 @@ async function boot() {
   $("exportBtn").onclick = () => {
     sync();
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data.resume, null, 2)], { type: "application/json" }));
     a.download = data.id + ".json";
     a.click();
     toast("已导出");
   };
-  $("fullBtn").onclick = () => {
+  $("fullBtn").onclick = async () => {
     sync();
-    const w = window.open("about:blank", "_blank");
-    if (!w) {
+    try {
+      const out = await api("/api/preview", { method: "POST", body: JSON.stringify(data) });
+      const w = window.open("about:blank", "_blank");
+      if (!w) {
+        window.open("/admin/preview/" + encodeURIComponent(id), "_blank");
+        return;
+      }
+      w.document.open();
+      w.document.write("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><link rel=\"stylesheet\" href=\"/css/resume.css\"></head><body class=\"page\">" + (out.html || "") + "</body></html>");
+      w.document.close();
+    } catch {
       window.open("/admin/preview/" + encodeURIComponent(id), "_blank");
-      return;
     }
-    w.document.open();
-    w.document.write("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"stylesheet\" href=\"/css/resume.css\"></head><body class=\"page\"></body></html>");
-    w.document.close();
-    const mount = w.document.createElement("div");
-    w.document.body.append(mount);
-    renderSheet(mount, data);
   };
   window.addEventListener("resize", layoutA4);
   $("delBtn").onclick = async () => {
@@ -253,7 +299,8 @@ async function boot() {
     try {
       const raw = JSON.parse($("json").value);
       if (!raw || typeof raw !== "object") throw new Error("坏 JSON");
-      data = { ...raw, id };
+      data = { id, resume: raw.basics ? raw : (data.resume || raw), presentation: data.presentation };
+      if (raw.basics) data.resume = raw;
       writeForm(data);
       fillRepeats();
       sync();
