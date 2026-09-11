@@ -75,18 +75,18 @@
           </div>
           <div class="field"><label>强调色</label><input name="accentColor" placeholder="默认" /></div>
           <div class="field"><label>字号</label><input name="fontSize" placeholder="默认" /></div>
-          <div class="field span2"><label>一句话</label><input name="tagline" /></div>
+          <div class="field"><label>一句话</label><input name="tagline" class="span2" /></div>
+          <div class="field"><label>邮箱</label><input name="email" type="email" /></div>
+          <div class="field"><label>电话</label><input name="phone" /></div>
+          <div class="field"><label>地点</label><input name="location" /></div>
+          <div class="field"><label>求职状态</label><input name="employmentStatus" /></div>
+          <div class="field span2"><label>头像 URL</label><input name="avatar" placeholder="https:// 或 data:" /></div>
         </div>
       </section>
       <section class="block">
         <h2>链接</h2>
         <div id="links"></div>
         <button class="btn ghost" type="button" data-add="links">加一条</button>
-      </section>
-      <section class="block">
-        <h2>联系</h2>
-        <div id="contact"></div>
-        <button class="btn ghost" type="button" data-add="contact">加一条</button>
       </section>
       <section class="block">
         <h2>技能</h2>
@@ -103,6 +103,36 @@
         <div id="projects"></div>
         <button class="btn ghost" type="button" data-add="projects">加一条</button>
       </section>
+      <details class="block">
+        <summary>教育</summary>
+        <div id="education"></div>
+        <button class="btn ghost" type="button" data-add="education">加一条</button>
+      </details>
+      <details class="block">
+        <summary>语言</summary>
+        <div id="languages"></div>
+        <button class="btn ghost" type="button" data-add="languages">加一条</button>
+      </details>
+      <details class="block">
+        <summary>证书</summary>
+        <div id="certifications"></div>
+        <button class="btn ghost" type="button" data-add="certifications">加一条</button>
+      </details>
+      <details class="block">
+        <summary>奖项</summary>
+        <div id="awards"></div>
+        <button class="btn ghost" type="button" data-add="awards">加一条</button>
+      </details>
+      <details class="block">
+        <summary>著作</summary>
+        <div id="publications"></div>
+        <button class="btn ghost" type="button" data-add="publications">加一条</button>
+      </details>
+      <details class="block">
+        <summary>自定义栏</summary>
+        <div id="customSections"></div>
+        <button class="btn ghost" type="button" data-add="customSections">加一栏</button>
+      </details>
       <details class="block">
         <summary>高级 · JSON</summary>
         <p class="muted">只读当前对象。粘贴覆盖后点「应用 JSON」。</p>

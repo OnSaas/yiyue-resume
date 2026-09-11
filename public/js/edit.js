@@ -128,13 +128,67 @@ function rowJob(item = {}) {
   return wrap;
 }
 
+function rowEdu(item = {}) {
+  const wrap = document.createElement("div");
+  wrap.className = "item";
+  const g = document.createElement("div");
+  g.className = "grid";
+  const school = field("学校", item.school || "");
+  const major = field("专业学位", item.major || item.degree || "");
+  const time = field("时间", item.time || "");
+  school.input.dataset.k = "school";
+  major.input.dataset.k = "major";
+  time.input.dataset.k = "time";
+  time.el.classList.add("span2");
+  g.append(school.el, major.el, time.el);
+  const pts = document.createElement("div");
+  pts.className = "field span2";
+  const lab = document.createElement("label");
+  lab.textContent = "要点（一行一条）";
+  const ta = document.createElement("textarea");
+  ta.value = (item.points || []).join("\n");
+  ta.dataset.k = "points";
+  pts.append(lab, ta);
+  wrap.append(g, pts, delBtn(wrap));
+  return wrap;
+}
+
+function rowLine(value = "", label = "条目") {
+  const wrap = document.createElement("div");
+  wrap.className = "item";
+  const { el, input } = field(label, value);
+  wrap.append(el, delBtn(wrap));
+  return wrap;
+}
+
+function rowCustom(sec = {}) {
+  const wrap = document.createElement("div");
+  wrap.className = "item";
+  wrap.dataset.kind = "custom";
+  const title = field("栏目标题", sec.title || "");
+  title.input.dataset.k = "title";
+  const itemsBox = document.createElement("div");
+  itemsBox.className = "custom-items";
+  const items = sec.items && sec.items.length ? sec.items : [{}];
+  for (const it of items) itemsBox.append(rowJob(it));
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "btn ghost";
+  add.textContent = "加一条";
+  add.addEventListener("click", () => {
+    itemsBox.append(rowJob());
+    sync();
+    pushHist();
+  });
+  wrap.append(title.el, itemsBox, add, delBtn(wrap));
+  return wrap;
+}
+
 function fillRepeats() {
   const r = data.resume || {};
   const links = $("links");
   links.replaceChildren();
   (r.links || []).forEach((x) => links.append(rowLink(x)));
-  const contact = $("contact");
-  contact.replaceChildren();
   const skills = $("skills");
   skills.replaceChildren();
   (r.skills || []).forEach((x) => skills.append(rowSkill(x)));
@@ -146,19 +200,53 @@ function fillRepeats() {
   (r.projects || []).forEach((x) =>
     pro.append(rowJob({ role: x.name, org: x.role, time: x.time, points: x.points, url: x.url }))
   );
+  const edu = $("education");
+  if (edu) {
+    edu.replaceChildren();
+    (r.education || []).forEach((x) => edu.append(rowEdu(x)));
+  }
+  const lineLabels = { languages: "语言", certifications: "证书", awards: "奖项", publications: "著作" };
+  for (const kind of Object.keys(lineLabels)) {
+    const box = $(kind);
+    if (!box) continue;
+    box.replaceChildren();
+    (r[kind] || []).forEach((x) => box.append(rowLine(x, lineLabels[kind])));
+  }
+  const custom = $("customSections");
+  if (custom) {
+    custom.replaceChildren();
+    (r.customSections || []).forEach((x) => custom.append(rowCustom(x)));
+  }
 }
 
 function collectList(root, kind) {
-  if (kind === "skills") {
-    return [...root.querySelectorAll("input")].map((i) => i.value);
+  if (!root) return [];
+  if (kind === "skills" || kind === "lines") {
+    return [...root.querySelectorAll(":scope > .item input")].map((i) => i.value);
   }
-  if (kind === "links" || kind === "contact") {
-    return [...root.querySelectorAll(".item")].map((item) => {
+  if (kind === "links") {
+    return [...root.querySelectorAll(":scope > .item")].map((item) => {
       const inputs = item.querySelectorAll("input");
       return { label: inputs[0]?.value || "", href: inputs[1]?.value || "" };
     });
   }
-  return [...root.querySelectorAll(".item")].map((item) => {
+  if (kind === "education") {
+    return [...root.querySelectorAll(":scope > .item")].map((item) => {
+      const obj = { school: "", major: "", time: "", points: [] };
+      item.querySelectorAll("[data-k]").forEach((n) => {
+        if (n.dataset.k === "points") obj.points = n.value.split("\n").map((s) => s.trim()).filter(Boolean);
+        else obj[n.dataset.k] = n.value;
+      });
+      return obj;
+    });
+  }
+  if (kind === "custom") {
+    return [...root.querySelectorAll(":scope > .item")].map((item) => ({
+      title: item.querySelector("[data-k=title]")?.value || "",
+      items: collectList(item.querySelector(".custom-items"), "job"),
+    }));
+  }
+  return [...root.querySelectorAll(":scope > .item")].map((item) => {
     const obj = { role: "", org: "", time: "", points: [] };
     item.querySelectorAll("[data-k]").forEach((n) => {
       if (n.dataset.k === "points") obj.points = n.value.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -172,6 +260,13 @@ function fieldVal(name) {
   return $("form").elements.namedItem(name);
 }
 
+function avatarUrl(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (/^(https?:|data:)/i.test(s)) return s;
+  return "";
+}
+
 function readForm() {
   return {
     resume: {
@@ -180,15 +275,15 @@ function readForm() {
         nameEn: fieldVal("nameEn").value,
         headline: fieldVal("headline")?.value || fieldVal("variant")?.value || "",
         summary: fieldVal("tagline").value,
-        avatar: data.resume?.basics?.avatar || "",
-        email: data.resume?.basics?.email || "",
-        phone: data.resume?.basics?.phone || "",
-        location: data.resume?.basics?.location || "",
+        avatar: avatarUrl(fieldVal("avatar")?.value),
+        email: fieldVal("email")?.value || "",
+        phone: fieldVal("phone")?.value || "",
+        location: fieldVal("location")?.value || "",
+        employmentStatus: fieldVal("employmentStatus")?.value || "",
       },
       links: collectList($("links"), "links"),
-      contact: [],
       experience: collectList($("experience"), "job"),
-      education: data.resume?.education || [],
+      education: collectList($("education"), "education"),
       projects: collectList($("projects"), "job").map((p, i) => ({
         name: p.role,
         role: p.org,
@@ -198,11 +293,11 @@ function readForm() {
       })),
       extras: data.resume?.extras || {},
       skills: collectList($("skills"), "skills"),
-      languages: data.resume?.languages || [],
-      certifications: data.resume?.certifications || [],
-      awards: data.resume?.awards || [],
-      publications: data.resume?.publications || [],
-      customSections: data.resume?.customSections || [],
+      languages: collectList($("languages"), "lines"),
+      certifications: collectList($("certifications"), "lines"),
+      awards: collectList($("awards"), "lines"),
+      publications: collectList($("publications"), "lines"),
+      customSections: collectList($("customSections"), "custom"),
     },
     presentation: {
       layout: fieldVal("layout")?.value || "classic",
@@ -225,6 +320,11 @@ function writeForm(doc) {
   fieldVal("nameEn").value = b.nameEn || "";
   fieldVal("headline").value = b.headline || "";
   fieldVal("tagline").value = b.summary || "";
+  if (fieldVal("email")) fieldVal("email").value = b.email || "";
+  if (fieldVal("phone")) fieldVal("phone").value = b.phone || "";
+  if (fieldVal("location")) fieldVal("location").value = b.location || "";
+  if (fieldVal("employmentStatus")) fieldVal("employmentStatus").value = b.employmentStatus || "";
+  if (fieldVal("avatar")) fieldVal("avatar").value = b.avatar || "";
   fieldVal("theme").value = doc.presentation?.theme || "paper";
   if (fieldVal("layout")) fieldVal("layout").value = doc.presentation?.layout || "classic";
   if (fieldVal("layoutVariant")) fieldVal("layoutVariant").value = doc.presentation?.layoutVariant || "left";
@@ -248,7 +348,7 @@ async function preview() {
   clearTimeout(previewTimer);
   previewTimer = setTimeout(async () => {
     try {
-      const out = await api("/api/preview", { method: "POST", body: JSON.stringify(data) });
+      const out = await api("/api/preview", { method: "POST", body: JSON.stringify({ ...data, fragment: true }) });
       const live = $("live");
       live.innerHTML = out.html || "";
       layoutA4();
@@ -386,7 +486,7 @@ async function boot() {
   $("fullBtn").onclick = async () => {
     sync();
     try {
-      const out = await api("/api/preview", { method: "POST", body: JSON.stringify(data) });
+      const out = await api("/api/preview", { method: "POST", body: JSON.stringify({ ...data, fragment: true }) });
       const w = window.open("about:blank", "_blank");
       if (!w) {
         window.open("/admin/preview/" + encodeURIComponent(id), "_blank");
@@ -429,8 +529,14 @@ async function boot() {
   document.querySelectorAll("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const k = btn.dataset.add;
-      if (k === "links" || k === "contact") $(k).append(rowLink());
+      if (k === "links") $(k).append(rowLink());
       else if (k === "skills") $(k).append(rowSkill());
+      else if (k === "education") $(k).append(rowEdu());
+      else if (k === "languages") $(k).append(rowLine("", "语言"));
+      else if (k === "certifications") $(k).append(rowLine("", "证书"));
+      else if (k === "awards") $(k).append(rowLine("", "奖项"));
+      else if (k === "publications") $(k).append(rowLine("", "著作"));
+      else if (k === "customSections") $(k).append(rowCustom());
       else $(k).append(rowJob());
       sync();
       pushHist();

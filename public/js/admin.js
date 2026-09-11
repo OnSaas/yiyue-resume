@@ -28,7 +28,6 @@ function blank() {
     nameEn: "",
     tagline: "",
     links: [],
-    contact: [],
     skills: [],
     experience: [],
     projects: [],
@@ -101,6 +100,8 @@ function updateSharePreview() {
   if (layout && layout !== "inherit") q.push("layout=" + encodeURIComponent(layout));
   const ori = $("orientation")?.value || "";
   if (ori && ori !== "inherit") q.push("orientation=" + encodeURIComponent(ori));
+  const lv = $("layoutVariant")?.value || "";
+  if (lv && lv !== "inherit") q.push("layoutVariant=" + encodeURIComponent(lv));
   if (q.length) src += "?" + q.join("&");
   if (iframe.getAttribute("src") !== src) iframe.setAttribute("src", src);
   requestAnimationFrame(scaleThumbs);
@@ -229,8 +230,9 @@ function setShareMode(mode, share) {
     editToken = share.token;
     $("editToken").textContent = shareLink(share);
     $("resumeId").value = share.resumeId;
-    $("theme").value = share.theme || share.presentation?.theme || "";
-    if ($("layout") && (share.layout || share.presentation?.layout)) $("layout").value = share.layout || share.presentation.layout;
+    $("theme").value = share.theme || share.presentation?.theme || "inherit";
+    if ($("layout")) $("layout").value = share.layout || share.presentation?.layout || "inherit";
+    if ($("orientation")) $("orientation").value = share.orientation || share.presentation?.orientation || "inherit";
     $("label").value = share.label || "";
     $("sharePw").value = "";
     $("clearPw").value = "no";
@@ -267,11 +269,19 @@ async function drawShares() {
     url.textContent = shareLink(s);
     const meta = document.createElement("div");
     meta.className = "muted";
+    const resume = list.find((r) => r.id === s.resumeId);
+    const themeRaw = s.theme || s.presentation?.theme || "inherit";
+    const layoutRaw = s.layout || s.presentation?.layout || "inherit";
+    const oriRaw = s.orientation || s.presentation?.orientation || "inherit";
+    const themeResolved = themeRaw === "inherit" ? (resume?.theme || "paper") : themeRaw;
+    const layoutResolved = layoutRaw === "inherit" ? (resume?.layout || "classic") : layoutRaw;
+    const oriResolved = oriRaw === "inherit" ? "沿用方向" : (oriRaw === "landscape" ? "横版" : "竖版");
     meta.textContent = [
       s.label,
       s.resumeId,
-      s.theme ? themeLabel(s.theme) : "沿用主题",
-      s.orientation && s.orientation !== "inherit" ? (s.orientation === "landscape" ? "横版" : "竖版") : "沿用方向",
+      themeRaw === "inherit" ? `主题 ${themeLabel(themeResolved)}（沿用）` : themeLabel(themeResolved),
+      layoutRaw === "inherit" ? `布局 ${layoutResolved}（沿用）` : layoutResolved,
+      oriResolved,
       s.resumeMissing ? "来源简历已删除" : "",
       s.hasPassword ? "有密码" : "无密码",
       s.revoked ? "已撤销" : remain(s.expiresAt),

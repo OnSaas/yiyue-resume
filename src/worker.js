@@ -15,6 +15,7 @@ import { FEATURE_FLAGS } from "./config/featureFlags.js";
 import { PRODUCT } from "./config/product.js";
 import { AppError, ImportError } from "./domain/errors.js";
 import { requestOrigin } from "./share/urls.js";
+import { previewResume } from "./services/preview.js";
 import {
   ADMIN_COOKIE,
   shareCookieName,
@@ -25,6 +26,10 @@ import {
   ttlSec,
   shareUnlocked,
   shareUnlockValue,
+  clientIp,
+  loginBlocked,
+  noteLoginFailure,
+  noteLoginSuccess,
 } from "./services/auth.js";
 
 function json(data, status = 200, headers = {}) {
@@ -96,11 +101,18 @@ export default {
       }
       if (method === "POST") {
         const body = await readBody(req);
+        const ip = clientIp(req);
+        const wantsJson = (req.headers.get("content-type") || "").includes("json");
         if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return jsonErr("CONFIG_MISSING", "未配置密钥", 503);
+        if (loginBlocked(ip)) {
+          return wantsJson ? jsonErr("TOO_MANY_ATTEMPTS", "登录失败", 429) : html(failPage("登录失败", "登录失败"), 429);
+        }
         if (body.password !== env.ADMIN_PASSWORD) {
-          if ((req.headers.get("content-type") || "").includes("json")) return jsonErr("INVALID_PASSWORD", "密码错误", 401);
+          noteLoginFailure(ip);
+          if (wantsJson) return jsonErr("INVALID_PASSWORD", "登录失败", 401);
           return Response.redirect(new URL("/login?e=1", url).toString(), 302);
         }
+        noteLoginSuccess(ip);
         const exp = Date.now() + ttlSec(env) * 1000;
         const tok = await adminToken(env, exp);
         return new Response(null, { status: 303, headers: { Location: "/admin", "Set-Cookie": cookieSet(ADMIN_COOKIE, tok, ttlSec(env)) } });
@@ -185,6 +197,16 @@ export default {
           }, 400);
         }
         return json({ ok: true, format: got.format, version: got.version, resume: got.canonical, warnings: got.warnings, stats: got.stats, preservedFields: got.preservedFields });
+      }
+
+      if (path === "/api/preview" && method === "POST") {
+        try {
+          const body = await req.json();
+          return json(previewResume(body));
+        } catch (e) {
+          if (e instanceof SyntaxError) return jsonErr("IMPORT_INVALID_FORMAT", "坏 JSON");
+          return serviceErr(e);
+        }
       }
 
       if (path === "/api/resumes" && method === "GET") return json({ resumes: await resumes.list() });

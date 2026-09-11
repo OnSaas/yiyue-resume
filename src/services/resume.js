@@ -26,10 +26,11 @@ export function resumeService(kv) {
       });
     },
     async update(id, body) {
-      const imported = importPayload(body.resume || body);
+      const raw = body.resume || body;
+      const imported = importPayload(raw);
       if (!imported.ok) throw new ImportError("IMPORT_INVALID_FORMAT", imported.errors.join("；"), { errors: imported.errors, format: imported.format });
       const prev = await repo.get(id);
-      const merged = mergeCanonical(prev?.resume || emptyCanonical(), imported.canonical);
+      const merged = mergeCanonical(prev?.resume || emptyCanonical(), imported.canonical, raw);
       return repo.save(id, {
         resume: merged,
         presentation: presentationFrom(body, prev?.presentation),

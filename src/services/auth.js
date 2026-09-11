@@ -65,3 +65,36 @@ export async function shareUnlocked(req, env, token) {
 export async function shareUnlockValue(env, token) {
   return hmacHex(env.SESSION_SECRET, "share:" + token);
 }
+
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_MAX_FAILS = 8;
+const loginFails = new Map();
+
+export function clientIp(req) {
+  const cf = req?.headers?.get?.("CF-Connecting-IP");
+  if (cf) return cf.trim();
+  const xff = req?.headers?.get?.("X-Forwarded-For");
+  if (xff) return xff.split(",")[0].trim();
+  return "unknown";
+}
+
+export function resetLoginThrottle() {
+  loginFails.clear();
+}
+
+export function loginBlocked(ip, now = Date.now()) {
+  const arr = (loginFails.get(ip) || []).filter((t) => now - t < LOGIN_WINDOW_MS);
+  loginFails.set(ip, arr);
+  return arr.length >= LOGIN_MAX_FAILS;
+}
+
+export function noteLoginFailure(ip, now = Date.now()) {
+  const arr = (loginFails.get(ip) || []).filter((t) => now - t < LOGIN_WINDOW_MS);
+  arr.push(now);
+  loginFails.set(ip, arr);
+  return arr.length;
+}
+
+export function noteLoginSuccess(ip) {
+  loginFails.delete(ip);
+}
