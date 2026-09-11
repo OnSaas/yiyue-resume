@@ -8,6 +8,10 @@ const themeLabel = (id) => THEMES.find((t) => t.id === id)?.label || id || "米�
 
 const $ = (id) => document.getElementById(id);
 
+function shareLink(s) {
+  return s.href || location.origin + (s.url || "/s/" + s.token);
+}
+
 function toast(msg) {
   const el = $("status");
   el.textContent = msg;
@@ -223,7 +227,7 @@ function setShareMode(mode, share) {
   }
   if (share) {
     editToken = share.token;
-    $("editToken").textContent = location.origin + share.url;
+    $("editToken").textContent = shareLink(share);
     $("resumeId").value = share.resumeId;
     $("theme").value = share.theme || share.presentation?.theme || "";
     if ($("layout") && (share.layout || share.presentation?.layout)) $("layout").value = share.layout || share.presentation.layout;
@@ -260,7 +264,7 @@ async function drawShares() {
     const left = document.createElement("div");
     const url = document.createElement("div");
     url.className = "url";
-    url.textContent = location.origin + s.url;
+    url.textContent = shareLink(s);
     const meta = document.createElement("div");
     meta.className = "muted";
     meta.textContent = [
@@ -280,7 +284,7 @@ async function drawShares() {
     copy.className = "btn ghost";
     copy.textContent = "复制";
     copy.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(location.origin + s.url);
+      await navigator.clipboard.writeText(shareLink(s));
       toast("已复制");
     });
     const edit = document.createElement("button");
@@ -403,7 +407,7 @@ async function boot() {
       if (shareMode === "create") {
         if ($("sharePw").value) body.password = $("sharePw").value;
         const s = await api("/api/shares", { method: "POST", body: JSON.stringify(body) });
-        const url = location.origin + s.url;
+        const url = shareLink(s);
         $("shareOut").textContent = url;
         await navigator.clipboard.writeText(url).catch(() => {});
         $("sharePw").value = "";
@@ -413,7 +417,7 @@ async function boot() {
         if ($("clearPw").value === "yes") body.clearPassword = true;
         else if ($("sharePw").value) body.password = $("sharePw").value;
         const s = await api("/api/shares/" + editToken, { method: "PATCH", body: JSON.stringify(body) });
-        $("shareOut").textContent = location.origin + s.url;
+        $("shareOut").textContent = shareLink(s);
         $("sharePw").value = "";
         toast("已保存，URL 未变");
       }

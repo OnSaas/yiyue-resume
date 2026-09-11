@@ -1,8 +1,10 @@
 import { emptyPresentation } from "../schema/presentation.js";
+import { sharePath, shareHref } from "../share/urls.js";
 
-function publicShare(s) {
+function publicShare(s, origin) {
   const p = s.presentation || {};
-  return {
+  const url = sharePath(s.token);
+  const out = {
     token: s.token,
     resumeId: s.resumeId,
     theme: p.theme || s.theme || "inherit",
@@ -15,9 +17,11 @@ function publicShare(s) {
     createdAt: s.createdAt,
     revoked: !!s.revoked,
     label: s.label || "",
-    url: "/s/" + s.token,
+    url,
     resumeMissing: !!s.resumeMissing,
   };
+  if (origin) out.href = shareHref(origin, s.token);
+  return out;
 }
 
 export function shareRepository(kv) {
@@ -47,11 +51,11 @@ export function shareRepository(kv) {
       await kv.put("share:" + token, JSON.stringify(share));
       return share;
     },
-    async list(resumeIds) {
+    async list(resumeIds, origin) {
       const tokens = await listTokens();
       const rows = await Promise.all(tokens.map((t) => this.get(t)));
       const set = resumeIds ? new Set(resumeIds) : null;
-      return rows.filter(Boolean).map((s) => publicShare({ ...s, resumeMissing: set ? !set.has(s.resumeId) : false }));
+      return rows.filter(Boolean).map((s) => publicShare({ ...s, resumeMissing: set ? !set.has(s.resumeId) : false }, origin));
     },
     publicShare,
   };

@@ -66,6 +66,8 @@ npx wrangler deploy
 
 默认 Worker 名与仓库 slug 均为 `reshare`（`*.workers.dev` 主机名由此决定）。改 `name` 会部署成另一条 Worker，已有分享链接不会自动搬家。
 
+生成分享链接用**当前请求的 origin**，路径固定 `/s/<token>`。不要硬编码 `*.workers.dev`。Token 不随域名变。
+
 不要把密码写进前端 JS 或 git。
 
 ## 路由

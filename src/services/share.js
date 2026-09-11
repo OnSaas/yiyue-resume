@@ -2,6 +2,7 @@ import { shareRepository } from "../repositories/shares.js";
 import { resolvePresentation } from "../schema/presentation.js";
 import { hashPassword, verifyPassword } from "../share/security.js";
 import { ShareError } from "../domain/errors.js";
+import { shareHref } from "../share/urls.js";
 
 function inheritToken(v) {
   return v === null || v === undefined || v === "" || v === "inherit";
@@ -17,24 +18,41 @@ export function presentationOverrideFromBody(body) {
   return out;
 }
 
+export function parseExpiry(body, now = Date.now()) {
+  if (body.expiresAt === null || body.expiresAt === "never" || body.ttl === "never") return { expiresAt: null };
+  if (body.expiresAt != null && body.expiresAt !== "") {
+    const expiresAt = Number(body.expiresAt);
+    if (!Number.isFinite(expiresAt)) throw new ShareError("SHARE_INVALID_EXPIRY", "expiresAt 无效", 400);
+    return { expiresAt };
+  }
+  if (body.ttlSec != null && body.ttlSec !== "") {
+    const sec = Number(body.ttlSec);
+    if (!Number.isFinite(sec) || sec <= 0) throw new ShareError("SHARE_INVALID_EXPIRY", "ttl 无效", 400);
+    return { expiresAt: now + sec * 1000 };
+  }
+  return undefined;
+}
+
 export function shareService(kv) {
   const repo = shareRepository(kv);
   return {
     get: (token) => repo.get(token),
-    list: (ids) => repo.list(ids),
-    publicShare: repo.publicShare,
+    list: (ids, origin) => repo.list(ids, origin),
+    publicShare: (s, origin) => repo.publicShare(s, origin),
+    href: (token, origin) => shareHref(origin, token),
     resolvePresentation,
     presentationOverrideFromBody,
     async create(body, exists) {
-      if (!exists) throw new ShareError("RESUME_NOT_FOUND", "简历不存在", 404);
+      if (!exists) throw new ShareError("RESUME_NOT_FOUND", "简历不存在", 400);
       const token = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
       const passwordHash = body.password ? await hashPassword(body.password) : null;
+      const exp = parseExpiry(body);
       const share = {
         token,
         resumeId: exists.id,
         presentation: presentationOverrideFromBody(body),
         passwordHash,
-        expiresAt: body.expiresAt ?? null,
+        expiresAt: exp ? exp.expiresAt : (body.expiresAt ?? null),
         createdAt: Date.now(),
         revoked: false,
         label: body.label || "",
@@ -53,9 +71,8 @@ export function shareService(kv) {
       }
       if (body.clearPassword) s.passwordHash = null;
       else if (body.password) s.passwordHash = await hashPassword(body.password);
-      if (body.expiresAt !== undefined) s.expiresAt = body.expiresAt;
-      else if (body.ttl === "never") s.expiresAt = null;
-      else if (body.ttlSec) s.expiresAt = Date.now() + Number(body.ttlSec) * 1000;
+      const exp = parseExpiry(body);
+      if (exp) s.expiresAt = exp.expiresAt;
       await repo.save(token, s);
       return s;
     },

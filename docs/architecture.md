@@ -43,6 +43,10 @@ API → Service → Domain/Schema → Renderer / Adapter / Repository
 
 核心 `renderResume(resume, presentation)` 可在本地 Node 无 Cloudflare 跑。
 
+HTTP 入口 `src/worker.js` 只做路由 / Cookie / 状态码。Resume / Share 业务走 `services/*`，KV 只在 `repositories/*`。
+
+公开分享 URL：`url` 永远是 `/s/<token>`；绝对地址 `href` 用当前请求 origin 拼，不写死主机名。
+
 ## 兼容层（不要当作品牌改）
 
 - 仓 / Worker 名：`reshare`（产品名 Reshare）
