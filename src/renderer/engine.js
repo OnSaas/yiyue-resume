@@ -4,6 +4,7 @@ import { resolveLayout } from "./registry/layouts.js";
 import { renderSection } from "./registry/sections.js";
 import { normalizePresentation } from "../schema/presentation.js";
 import { resolveCanvas } from "../domain/canvas.js";
+import { PRODUCT } from "../config/product.js";
 
 function header(resume) {
   const b = resume.basics || {};
@@ -98,6 +99,10 @@ export function renderResume(resume, presentationInput, context = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>${esc(title)}</title>
+  <meta name="description" content="${esc(resume.basics?.headline || resume.basics?.summary || title)}" />
+  <meta property="og:title" content="${esc(title)}" />
+  <meta property="og:site_name" content="${esc(PRODUCT.name)}" />
+  <meta property="og:type" content="profile" />
   <link rel="stylesheet" href="/css/resume.css" />
   <style>@page { size: ${canvas.pageSizeCss || canvas.pageSize}; margin: 12mm; }</style>
 </head>

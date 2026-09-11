@@ -1,5 +1,6 @@
 {
-  "name": "yiyue-resume",
+  "name": "reshare",
+  "description": "A self-hosted resume management and sharing platform powered by Cloudflare Workers.",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,3 +1,7 @@
+/**
+ * Reshare — Cloudflare Worker entry.
+ * Admin / Public share / API. KV keys, cookies, script name are compatibility, not brand.
+ */
 import { ingest, listAdapters } from "./adapters/index.js";
 import { renderResume } from "./renderer/engine.js";
 import { resumeRepository } from "./repositories/resumes.js";
@@ -11,6 +15,7 @@ import { layoutMetadata } from "./renderer/registry/layouts.js";
 import { themeMetadata } from "./renderer/registry/themes.js";
 import { PAGE_SIZES } from "./config/pageSizes.js";
 import { FEATURE_FLAGS } from "./config/featureFlags.js";
+import { PRODUCT } from "./config/product.js";
 
 const enc = new TextEncoder();
 
@@ -100,10 +105,10 @@ function parseExpiry(body) {
   return undefined;
 }
 function failPage(title, msg) {
-  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${title}</title><link rel="stylesheet" href="/css/resume.css"/></head><body class="page"><main class="gate"><h1>${title}</h1><p>${msg}</p></main></body></html>`;
+  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${PRODUCT.name} · ${title}</title><link rel="stylesheet" href="/css/resume.css"/></head><body class="page"><main class="gate"><h1>${title}</h1><p>${msg}</p><p class="muted">${PRODUCT.name}</p></main></body></html>`;
 }
 function unlockPage(token, err) {
-  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>解锁简历</title><link rel="stylesheet" href="/css/resume.css"/></head><body class="page"><form class="gate" method="post" action="/s/${token}/unlock"><h1>这份简历有访问密码</h1><input type="password" name="password" required autocomplete="current-password"/><button type="submit">查看</button>${err ? `<p class="err">${err}</p>` : ""}</form></body></html>`;
+  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${PRODUCT.name} · 解锁简历</title><link rel="stylesheet" href="/css/resume.css"/></head><body class="page"><form class="gate" method="post" action="/s/${token}/unlock"><h1>这份简历有访问密码</h1><input type="password" name="password" required autocomplete="current-password"/><button type="submit">查看</button>${err ? `<p class="err">${err}</p>` : ""}</form></body></html>`;
 }
 async function requireAdmin(req, env) {
   if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return jsonErr("CONFIG_MISSING", "未配置 ADMIN_PASSWORD 或 SESSION_SECRET", 503);
@@ -233,6 +238,7 @@ export default {
 
       if (path === "/api/meta" && method === "GET") {
         return json({
+          product: PRODUCT,
           layouts: layoutMetadata(),
           themes: themeMetadata(),
           orientations: ORIENTATIONS,

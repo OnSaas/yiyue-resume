@@ -111,6 +111,12 @@ test("yiyue-project ingest", () => {
   assert.equal(got.resume.basics.name, "扉月");
 });
 
+test("reshare-project alias ingest", () => {
+  const got = ingest({ format: "reshare-project", version: 1, resume: { basics: { name: "扉月" }, experience: [] } });
+  assert.equal(got.ok, true);
+  assert.equal(got.resume.basics.name, "扉月");
+});
+
 test("unknown format", () => {
   assert.equal(detectFormat({ foo: 1 }), "unknown");
   const got = ingest({ foo: 1 });

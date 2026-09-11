@@ -3,6 +3,7 @@ import { migrateResume } from "../schema/migrations/index.js";
 import { fromMofang, toMofang, isMofang, detectMofangVersion, preservedFields, ADAPTER_VERSION } from "./mofang.js";
 import { fromNative, isNative } from "./native.js";
 import { registerAdapter, detectAdapter, getAdapter, listAdapters } from "./registry.js";
+import { isProject } from "../schema/project.js";
 
 registerAdapter({
   id: "canonical",
@@ -33,7 +34,7 @@ registerAdapter({
 
 export function detectFormat(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "unknown";
-  if (raw.format === "yiyue-project" && raw.resume) return "yiyue-project";
+  if (isProject(raw)) return raw.format;
   return detectAdapter(raw).id;
 }
 
@@ -75,7 +76,7 @@ export function ingest(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, errors: ["JSON 格式错误"], format: "unknown", resume: emptyCanonical(), canonical: emptyCanonical(), warnings: [], stats: statsOf(emptyCanonical()) };
   }
-  if (raw.format === "yiyue-project" && raw.resume) {
+  if (isProject(raw)) {
     raw = raw.resume;
   }
   const format = detectFormat(raw);

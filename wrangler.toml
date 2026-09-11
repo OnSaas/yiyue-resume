@@ -1,3 +1,4 @@
+# Product: Reshare. Script name frozen — existing EdgeNux hostname + KV binding.
 name = "yiyue-resume"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"

@@ -1,3 +1,5 @@
+import { isProject } from "../schema/project.js";
+
 const adapters = [];
 
 export function registerAdapter(adapter) {
@@ -12,7 +14,7 @@ export function listAdapters() {
 }
 
 export function detectAdapter(raw) {
-  if (raw && raw.format === "yiyue-project" && raw.resume) return { id: "yiyue-project", adapter: null };
+  if (isProject(raw)) return { id: raw.format, adapter: null };
   for (const a of adapters) {
     if (a.detect && a.detect(raw)) return { id: a.id, adapter: a };
   }

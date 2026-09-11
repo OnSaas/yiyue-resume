@@ -282,7 +282,7 @@ async function previewImport(raw) {
   $("formErr").textContent = "";
   const got = await api("/api/import", { method: "POST", body: JSON.stringify({ payload: raw }) });
   pendingImport = got;
-  const fmt = got.format === "mofang" ? "魔方简历 JSON" : got.format === "yiyue-project" ? "项目 JSON" : got.format;
+  const fmt = got.format === "mofang" ? "魔方简历 JSON" : got.format === "yiyue-project" || got.format === "reshare-project" ? "项目 JSON" : got.format;
   const s = got.stats || {};
   $("importHint").textContent = `已识别为${fmt} · 经历 ${s.experience || 0} · 项目 ${s.projects || 0}` +
     (got.warnings?.length ? ` · ${got.warnings.length} 条提示` : "") +
