@@ -45,7 +45,7 @@ API → Service → Domain/Schema → Renderer / Adapter / Repository
 
 ## 兼容层（不要当作品牌改）
 
-- Worker script name / `*.workers.dev` 主机名
+- 仓 / Worker 名：`reshare`（产品名 Reshare）
 - KV binding `RESUME_KV`、key `resume:` / `share:`
 - Cookie `yr_admin` / `yr_share_{token}`
 - 项目 JSON `format: "yiyue-project"`（读取同时接受 `reshare-project`）

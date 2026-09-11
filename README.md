@@ -64,7 +64,7 @@ npx wrangler deploy
 
 可选：`SESSION_TTL_SEC` 覆盖管理员 Cookie 秒数。
 
-Worker **script name** 决定 `*.workers.dev` 主机名。改 `wrangler.toml` 的 `name` 会部署成另一条 Worker，已有链接和数据绑定不会跟着搬家。本仓库默认名是历史兼容值，不要为了品牌去改它。
+默认 Worker 名与仓库 slug 均为 `reshare`（`*.workers.dev` 主机名由此决定）。改 `name` 会部署成另一条 Worker，已有分享链接不会自动搬家。
 
 不要把密码写进前端 JS 或 git。
 
